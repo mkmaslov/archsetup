@@ -1,0 +1,101 @@
+##################
+## LINUX GUIDES ##
+##################
+
+** ARCH LINUX INSTALLATION WITH FULL-DISK ENCRYPTION **
+
+## INSTALLATION ##
+>> setfont ter-132b
+>> ls /sys/firmware/efi/efivars
+>> iwctl
+>> device list
+>> station wlan0 connect SSID_name
+>> timedatectl set-ntp true
+>> lsblk
+>> gdisk /dev/nvme...
+>> o
+>> n (New patrition)
+>> +512MB (Size)
+>> ef00 (Type)
+>> n
+>> 8e00
+>> mkfs.
+
+#######################
+#   ARCH LINUX (ARM, LUKS)   #
+#######################
+[needs lvm2, systemd-container]
+
+#   SOURCE
+Arch Linux ARM64: https://archlinuxarm.org/forum/viewtopic.php?f=65&t=15994
+Arch Linux ARM Encryption: https://gist.github.com/XSystem252/d274cd0af836a72ff42d590d59647928
+Arch Linux Encryption: https://www.coded-with-love.com/blog/install-arch-linux-encrypted/
+Linux hardening: https://www.pluralsight.com/blog/it-ops/linux-hardening-secure-server-checklist
+
+>> lsblk
+>> sudo fdisk /dev/sda
+>> o (new table)
+>> n (new partition)
+>> +512M
+>> t (type)
+>> c (FAT32)
+>> n
+>> t
+>> 8e (Linux LVM)
+>> w
+>> sudo mkfs.vfat /dev/sda1
+>> modprobe dm-crypt
+>> cryptsetup luksFormat -c xchacha12,aes-adiantum-plain64 /dev/sda2
+>> cryptsetup open --type luks /dev/sda2 lvm
+>>  pvcreate /dev/mapper/lvm
+>>  vgcreate main /dev/mapper/lvm
+>>  lvcreate -L10G main -n swap
+>>  lvcreate -l 100%FREE main -n root
+>>  mkswap /dev/mapper/main-swap
+>>  mkfs.ext4 /dev/mapper/main-root
+>>  mount /dev/sda1 boot
+>>  mount /dev/mapper/main-root root
+>>  bsdtar -xpf <arch_linux_ARM_installer>.tar.gz -C root
+>>  sync
+>>  mv root/boot/* boot
+>>  sync
+>>  umount boot root
+>>  vgchange -a n main [to close lvm]
+>>  cryptsetup close lvm [to lock luks]
+[apt-get install systemd-container]
+>>  systemd-nspawn --bind-ro=/etc/resolv.conf --bind=/home/<user>/boot:/boot -D root -M archroot
+>>  nano /etc/locale.gen
+en_US.UTF-8 UTF-8
+>>  locale-gen
+>>  ln -sf /usr/share/zoneinfo/Europe/Vienna /etc/localtime
+>>  nano /etc/locale.conf
+LANG=en_US.UTF-8
+>>  nano /etc/vconsole.conf
+KEYMAP=en
+FONT=ter-132b
+>>  pacman-key --init
+>>  pacman-key --populate archlinuxarm
+>>  nano /etc/pacman.d/mirrorlist
+# Server = http://mirror...
+Server = http://eu.mirror...
+>>  pacman -Syy
+>>  pacman -S --needed linux-rpi raspberrypi-bootloader raspberrypi-firmware
+>>  pacman -S lvm2 man-db man-pages texinfo terminus-font
+>>  nano /etc/fstab
+/dev/sda1   /boot   vfat  defaults   0   0
+/dev/mapper/main-root   /root   ext4   defaults   0   0
+/dev/mapper/main-swap   none   swap   defaults   0   0
+>>  nano /etc/mkinitcpio.conf
+HOOKS=(base udev autodetect modconf block keyboard encrypt lvm2 filesystems fsck)
+>>  mkinitcpio -P
+>>  passwd
+<root password>
+>>  nano /boot/cmdline.txt
+cryptdevice=/dev/sda2:main root=/dev/mapper/main-root resume=/dev/mapper/main-swap
+>>  nano /etc/hostname
+<hostname>
+>>  nano /etc/hosts
+127.0.0.1  localhost my-laptop
+::1        localhost my-laptop
+127.0.1.1  my-laptop.localdomain my-laptop
+>>  setfont ter-132b
