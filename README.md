@@ -1,7 +1,14 @@
+# Arch Linux installation guide
+
+
+
 This guide is a collection of useful commands while installing Arch Linux onto your PC.
 
 - [General](#general)
   * [CLI configuration of Wi-Fi connection](#cli-configuration-of-wi-fi-connection)
+  * [Recommended software](#recommended-software)
+    + [Personal computer](#personal-computer)
+    + [Homelab](#homelab)
 
 - [Arch Linux on PC](#arch-linux-on-pc)
   * [Installation medium](#installation-medium)
@@ -11,10 +18,10 @@ This guide is a collection of useful commands while installing Arch Linux onto y
     + [RaspberryPi OS CLI Setup](#raspberrypi-os-cli-setup)
   * [Maintenance drive](#maintenance-drive)
   * [Time synchronization](#time-synchronization)
-  
-## General
+    
+# General
 
-### CLI configuration of Wi-Fi connection
+## CLI configuration of Wi-Fi connection
 Requires packages: `wpa_supplicant`, `dhcpcd`.
 * * * 
 List all network interfaces:
@@ -74,9 +81,52 @@ systemctl enable dhcpcd@<interface>.service
 
 All the information is taken from: [wpa_supplicant (ArchWiki)](https://wiki.archlinux.org/title/Wpa_supplicant) and [dhcpcd (ArchWiki)](https://wiki.archlinux.org/title/Dhcpcd).
 
-## Arch Linux on PC
+## Recommended software
 
-### Installation medium
+### Personal computer
+
+- **Mozilla Firefox**
+  * change settings for privacy
+  * Bitwarden extension
+  * uBlock Origin extension with Legitimate URLs list
+  * Additional reading: [1](https://www.reddit.com/r/privacy/comments/d3obxq/firefox_privacy_guide/), [2](https://www.reddit.com/r/privacytoolsIO/comments/ldrhso/firefox_privacy_extensions/gm8g1x2/?context=3), [3](https://anonyome.com/2020/04/why-compartmentalization-is-the-most-powerful-data-privacy-strategy/) and [4](https://github.com/arkenfox/user.js/wiki/4.1-Extensions)
+  
+- **Tor Browser** -- for anonymous Internet surfing
+
+- **Proton VPN** -- Linux application, Open VPN profile leaks IPv6 address
+
+- **qBitTorrent**
+
+- **VSCodium**
+  * custom settings.json
+  * Latex workshop extension
+  * Jupyter extension
+  * Code Runner extension
+  * Wolfram language extension
+
+### Homelab
+
+- **Seafile** -- end-to-end encrypted open source file synchronization service.
+ See [server manual](https://manual.seafile.com/deploy/) and [download for ARM](https://github.com/haiwen/seafile-rpi/releases).
+ 
+ - **EteBase** -- end-to-end encrypted open source contact and calendar service. See [GitHub page](https://github.com/etesync/server).
+ 
+ - **Standard notes** -- end-to-end encrypted open source note taking service. See [self-hosting guide](https://docs.standardnotes.com/self-hosting/docker).
+ 
+ - **Bitwarden**
+ 
+ - **Navidrome**
+ 
+ - **PiHole**
+ 
+ [Other ideas](https://github.com/pluja/awesome-privacy#photo-storage)
+ 
+ 
+
+
+# Arch Linux on PC
+
+## Installation medium
 List all connected drives:
 ```
 lsblk
@@ -94,7 +144,7 @@ After installation, wipe the drive with:
 wipefs --all /dev/sdX
 ```
 
-### Partitioning drive
+## Partitioning drive
 Installation on x86-64 requires EFI boot partition
 ```
 fdisk /dev/nvme0n1
@@ -127,33 +177,33 @@ t
 w
 ```
 
-### Full-disk encryption
+## Full-disk encryption
 ```
 cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 /dev/nvme0n1p2
 ```
 
-### Installing packages
+## Installing packages
 ```
 pacstrap -something wpa_supplicant dhcpcd
 ```
 
-## Arch Linux ARM
+# Arch Linux ARM
 
-### Firmware maintenance drive
+## Firmware maintenance drive
 
-#### RaspberryPi OS CLI Setup
+### RaspberryPi OS CLI Setup
 To set up larger font size in console:
 ```
 sudo dpkg-reconfigure console-setup
 ```
 
-### Maintenance drive
+## Maintenance drive
 
-### Partitioning drive
+## Partitioning drive
 
-### Time synchronization
+## Time synchronization
 
-The very first thing that needs to be set up after the network is functioning is [time synchronization](https://wiki.archlinux.org/title/Systemd-timesyncd). Without a properly synchronized clock many essential tools may not work. For instance, `pacman -Syu` may fail due to time inconsistencies in GPG signatures, which may subsequently lead to a non-bootable setup[¹](#comment-1).
+The very first thing that needs to be set up after the network is functioning is [time synchronization](https://wiki.archlinux.org/title/Systemd-timesyncd). Without a properly synchronized clock many essential tools may not work. For instance, `pacman -Syu` may fail due to time inconsistencies in GPG signatures, which may subsequently lead to a non-bootable setup[^C1].
 
 In Arch Linux ARM, by default, `systemd-networkd.service` is enabled, while this guide suggests using `wpa_supplicant.service` and `dhcpcd.service`. When both of these options are enabled, `systemd-timesyncd.service` fails to update the clock at boot. Therefore, if following this guide, make sure to disable the `systemd-networkd.service`:
 ```
@@ -196,8 +246,7 @@ Root distance: 231.856ms (max: 5s)
     Frequency: +267.747ppm
 ```
 
-## Comments
-### Comment 1
-I once broke my installation by running `pacman -Syu` on a system with an unsynchronized clock. The operation freezed with "GPG key from the future" error. After reboot, `initramfs.img` was corrupted and the system was not booting.
+# Comments
+[^C1]: I once broke my installation by running `pacman -Syu` on a system with an unsynchronized clock. The operation freezed with "GPG key from the future" error. After reboot, `initramfs.img` was corrupted and the system was not booting.
 
 
