@@ -152,18 +152,52 @@ sudo dpkg-reconfigure console-setup
 ### Partitioning drive
 
 ### Time synchronization
-THIS NEEDS TO BE DONE BEFORE RUNNING FULL UPGRADE!!
-```
-timedatectl set-ntp true
-```
-```
-timedatectl status
-```
-```
-timedatectl timesync-status
-```
-`systemd-timesyncd` won't work with `systemd-networkd`, so you need to deactivate the latter:
+
+The very first thing that needs to be set up after the network is functioning is [time synchronization](https://wiki.archlinux.org/title/Systemd-timesyncd). Without a properly synchronized clock many essential tools may not work. For instance, `pacman -Syu` may fail due to time inconsistencies in GPG signatures, which may subsequently lead to a non-bootable setup[¹](#comment-1).
+
+In Arch Linux ARM, by default, `systemd-networkd.service` is enabled, while this guide suggests using `wpa_supplicant.service` and `dhcpcd.service`. When both of these options are enabled, `systemd-timesyncd.service` fails to update the clock at boot. Therefore, if following this guide, make sure to disable the `systemd-networkd.service`:
 ```
 systemctl disable systemd-networkd.service
 ```
+
+Automatic time-synchronization via `systemd-timesyncd.service` can be enabled by running:
+```
+systemctl enable systemd-timesyncd.service
+timedatectl set-ntp true
+```
+The configuration file containing addresses of time servers is stored in `/etc/systemd/timesyncd.conf`.
+
+If set up correctly, one should see:
+```console
+$ timedatectl status
+Local time: Thu 2015-07-09 18:21:33 CEST
+           Universal time: Thu 2015-07-09 16:21:33 UTC
+                 RTC time: Thu 2015-07-09 16:21:33
+                Time zone: Europe/Amsterdam (CEST, +0200)
+System clock synchronized: yes
+              NTP service: active
+          RTC in local TZ: no
+```
+For the information about current time server that may be relevant for debugging:
+```console
+$ timedatectl timesync-status
+       Server: 103.47.76.177 (0.arch.pool.ntp.org)
+Poll interval: 2min 8s (min: 32s; max 34min 8s)
+         Leap: normal
+      Version: 4
+      Stratum: 2
+    Reference: C342F10A
+    Precision: 1us (-21)
+Root distance: 231.856ms (max: 5s)
+       Offset: -19.428ms
+        Delay: 36.717ms
+       Jitter: 7.343ms
+ Packet count: 2
+    Frequency: +267.747ppm
+```
+
+## Comments
+### Comment 1
+I once broke my installation by running `pacman -Syu` on a system with an unsynchronized clock. The operation freezed with "GPG key from the future" error. After reboot, `initramfs.img` was corrupted and the system was not booting.
+
 
