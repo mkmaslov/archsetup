@@ -29,13 +29,14 @@ The instructions below were tested on several Lenovo Thinkpad laptops, [which us
 
 *References*: [official Arch Linux installation guide](https://wiki.archlinux.org/title/Installation_guide) and [USB drive creation](https://wiki.archlinux.org/title/USB_flash_installation_medium).
 
-List all the connected storage devices using `sudo lsblk` and choose the drive that will be used as an installation medium (further `/dev/sdX`). Wipe the filesystem on the selected drive:
+List all connected storage devices using `sudo lsblk -d` and choose the drive that will be used as an installation medium (further `/dev/sdX`). Unmount all of the selected drive's partitions and wipe the filesystem:
 ```
+for partition in /dev/sdX?*; do sudo umount -q $partition; done
 sudo wipefs --all /dev/sdX
 ```
-[Download](https://archlinux.org/download/) the latest Arch Linux image (`archlinux-*.iso`) and its GnuPG signature (`archlinux-*.iso.sig`). Put both files in the same folder and run a terminal instance there. Verify the signature:
+[Download](https://archlinux.org/download/) the latest Arch Linux image (`archlinux-x86_64.iso`) and its GnuPG signature (`archlinux-x86_64.iso.sig`). Put both files in the same folder and run a terminal instance there. Verify the signature:
 ```console
-$ gpg --keyserver-options auto-key-retrieve --verify archlinux-*.iso.sig archlinux-*.iso
+$ gpg --keyserver-options auto-key-retrieve --verify archlinux-x86_64.iso.sig archlinux-x86_64.iso
 gpg: Signature made Thu 01 Dec 2022 17:40:26 CET
 gpg:                using RSA key 4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC
 gpg: Good signature from "Pierre Schmitz <pierre@archlinux.de>" [unknown]
@@ -46,13 +47,17 @@ Primary key fingerprint: 4AA4 767B BC9C 4B1D 18AE  28B7 7F2D 434B 9741 E8A
 ```
 Make sure that the primary key fingerprint matches PGP fingerprint from the [downloads page](https://archlinux.org/download/). This is especially important, if the signature file was downloaded from one of the mirror sites.
 
-After successfull image verification write it to the selected drive:
+After successfull image verification, write it to the selected drive:
 ```
-cp archlinux-*.iso /dev/sdX
+sudo dd bs=4M if=archlinux-x86_64.iso of=/dev/sdX conv=fsync oflag=direct status=progress
+sudo sync
 ```
+
+The aforementioned instructions are also available in the form of [**a shell script**](https://github.com/mkmaslov/archlinux_setup_guide/blob/main/create_USB.sh).
+
 To wipe the storage device after Arch Linux installation, the ISO 9660 filesystem signature needs to be removed:
 ```
-wipefs --all /dev/sdX
+sudo wipefs --all /dev/sdX
 ```
 
 ## Partitioning drive
