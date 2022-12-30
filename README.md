@@ -17,6 +17,7 @@ The contents are organised as follows:
     + [CLI configuration of Wi-Fi connection](#cli-configuration-of-wi-fi-connection)
     + [Setting up time synchronization](#setting-up-time-synchronization)
     + [Configuring package managers](#configuring-package-managers)
+    + [Additional configuration and post-install](#additional-configuration-and-post-install)
 
 - [Installing Arch Linux on x64 machine](#installing-arch-linux-on-x64-machine)
   * [Creating installation medium](#creating-installation-medium)
@@ -130,6 +131,65 @@ $ cat /etc/fstab
 /dev/sda2        /      ext4    defaults   0       0
 ```
 
+### CLI configuration of Wi-Fi connection
+Requires packages: `wpa_supplicant`, `dhcpcd`.
+* * * 
+List all network interfaces:
+```bash
+ip a
+```
+Set the state of a chosen interface `<interface>` to `up`:
+```bash
+ip link set <interface> up
+```
+Scan `<interface>` for available Wi-Fi networks:
+```bash
+iwlist <interface> scan | grep ESSID
+```
+Connect to a chosen network `<ESSID>` with password `<password>`:
+```bash
+wpa_passphrase <ESSID> <password> | tee /etc/wpa_supplicant.conf
+```
+By default `wpa_passphrase` saves `<password>` in plain text. Open `/etc/wpa_supplicant.conf` using: 
+```bash
+nano /etc/wpa_supplicant.conf
+```
+and remove the line `#psk="<password>"`.
+
+Activate `wpa_supplicant` on the interface `<interface>`:
+```bash
+wpa_supplicant -c /etc/wpa_supplicant.conf -i <interface> -B
+```
+Argument `-B` makes the daemon run in the background.
+
+Activate `dhcpcd` on the interface `<interface>`:
+```bash
+dhcpcd <interface>
+``` 
+
+* * * 
+To automatically connect to Wi-Fi at boot, configure `dhcpcd@<interface>` daemon with `10-wpa_supplicant` hook.
+
+Add `ctrl_interface=DIR=/var/run/wpa_supplicant` at the very beginning of `/etc/wpa_supplicant.conf`:
+```bash
+nano /etc/wpa_supplicant.conf
+```
+Add `env wpa_supplicant_conf=/etc/wpa_supplicant.conf` line to `/etc/dhcpcd.conf`:
+```bash
+nano /etc/dhcpcd.conf
+```
+Create a symbolic link, which ensures that the latest version of `10-wpa_supplicant` hook is used:
+```bash
+ln -s /usr/share/dhcpcd/hooks/10-wpa_supplicant /usr/lib/dhcpcd/dhcpcd-hooks/
+```
+Enable `systemctl` daemon:
+```bash
+systemctl enable dhcpcd@<interface>.service
+```
+* * * 
+**Disclaimer:** this guide was written for the ease-of-access purposes only. 
+
+All the information is taken from: [wpa_supplicant (ArchWiki)](https://wiki.archlinux.org/title/Wpa_supplicant) and [dhcpcd (ArchWiki)](https://wiki.archlinux.org/title/Dhcpcd).
 
 
 ### Setting up time synchronization
@@ -208,67 +268,13 @@ pacman-key --populate archlinuxarm
 pacman -Syu
 ```
 
-# General tools
+### Additional configuration and post-install
+```
+pacman -S lvm2 terminus-font
+setfont ter-132b
+```
 
-## CLI configuration of Wi-Fi connection
-Requires packages: `wpa_supplicant`, `dhcpcd`.
-* * * 
-List all network interfaces:
-```bash
-ip a
-```
-Set the state of a chosen interface `<interface>` to `up`:
-```bash
-ip link set <interface> up
-```
-Scan `<interface>` for available Wi-Fi networks:
-```bash
-iwlist <interface> scan | grep ESSID
-```
-Connect to a chosen network `<ESSID>` with password `<password>`:
-```bash
-wpa_passphrase <ESSID> <password> | tee /etc/wpa_supplicant.conf
-```
-By default `wpa_passphrase` saves `<password>` in plain text. Open `/etc/wpa_supplicant.conf` using: 
-```bash
-nano /etc/wpa_supplicant.conf
-```
-and remove the line `#psk="<password>"`.
 
-Activate `wpa_supplicant` on the interface `<interface>`:
-```bash
-wpa_supplicant -c /etc/wpa_supplicant.conf -i <interface> -B
-```
-Argument `-B` makes the daemon run in the background.
-
-Activate `dhcpcd` on the interface `<interface>`:
-```bash
-dhcpcd <interface>
-``` 
-
-* * * 
-To automatically connect to Wi-Fi at boot, configure `dhcpcd@<interface>` daemon with `10-wpa_supplicant` hook.
-
-Add `ctrl_interface=DIR=/var/run/wpa_supplicant` at the very beginning of `/etc/wpa_supplicant.conf`:
-```bash
-nano /etc/wpa_supplicant.conf
-```
-Add `env wpa_supplicant_conf=/etc/wpa_supplicant.conf` line to `/etc/dhcpcd.conf`:
-```bash
-nano /etc/dhcpcd.conf
-```
-Create a symbolic link, which ensures that the latest version of `10-wpa_supplicant` hook is used:
-```bash
-ln -s /usr/share/dhcpcd/hooks/10-wpa_supplicant /usr/lib/dhcpcd/dhcpcd-hooks/
-```
-Enable `systemctl` daemon:
-```bash
-systemctl enable dhcpcd@<interface>.service
-```
-* * * 
-**Disclaimer:** this guide was written for the ease-of-access purposes only. 
-
-All the information is taken from: [wpa_supplicant (ArchWiki)](https://wiki.archlinux.org/title/Wpa_supplicant) and [dhcpcd (ArchWiki)](https://wiki.archlinux.org/title/Dhcpcd).
     
 # Installing Arch Linux on x64 machine
 
@@ -312,36 +318,29 @@ sudo wipefs --all /dev/sdX
 ## Partitioning hard drive and configuring full-disk AES encryption
 
 Installation on x86-64 requires EFI boot partition
+
+Check if EFI is enabled:
+```
+ls /sys/firmware/efi/efivars
+```
+output should be non-empty.
+
+Partition drive: 
 ```
 fdisk /dev/nvme0n1
-```
-```
 g
-```
-```
 n
-```
-```
 +512M
-```
-```
 t
-```
-```
 1
-```
-```
 n
-```
-```
 t
-```
-```
 43
-```
-```
 w
 ```
+note that PC setup requires GPT partition table and EFI-type boot partition.
+
+Fastest algorithm on hardware with AES acelaration:
 ```
 cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 /dev/nvme0n1p2
 ```
@@ -349,7 +348,30 @@ cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 /dev/nvme0n1p2
 ## Performing initial PC setup and installing basic software
 
 ```
-pacstrap -something wpa_supplicant dhcpcd
+pacstrap -something wpa_supplicant dhcpcd lvm2
+```
+
+## DUMP
+```
+>>  pacman -S lvm2 man-db man-pages texinfo terminus-font
+>>  nano /etc/fstab
+/dev/sda1   /boot   vfat  defaults   0   0
+/dev/mapper/main-root   /root   ext4   defaults   0   0
+/dev/mapper/main-swap   none   swap   defaults   0   0
+>>  nano /etc/mkinitcpio.conf
+HOOKS=(base udev autodetect modconf block keyboard encrypt lvm2 filesystems fsck)
+>>  mkinitcpio -P
+>>  passwd
+<root password>
+>>  nano /boot/cmdline.txt
+cryptdevice=/dev/sda2:main root=/dev/mapper/main-root resume=/dev/mapper/main-swap
+>>  nano /etc/hostname
+<hostname>
+>>  nano /etc/hosts
+127.0.0.1  localhost my-laptop
+::1        localhost my-laptop
+127.0.1.1  my-laptop.localdomain my-laptop
+>>  setfont ter-132b
 ```
 
 # Recommended software
