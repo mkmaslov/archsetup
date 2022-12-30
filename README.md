@@ -76,6 +76,16 @@ Host system needs to have `lvm2` enabled.
 >>  mount /dev/mapper/main-root root
 ```
 
+```
+>>  bsdtar -xpf <arch_linux_ARM_installer>.tar.gz -C root
+>>  sync
+>>  mv root/boot/* boot
+>>  sync
+>>  umount boot root
+>>  vgchange -a n main [to close lvm]
+>>  cryptsetup close lvm [to lock luks]
+```
+
 ## Performing initial server setup and installing basic software
 
 ### Fixing U-Boot bootloader
@@ -94,6 +104,12 @@ mkimage -A arm -T script -O linux -d boot.txt boot.scr
 ```
 
 ### Replacing U-Boot bootloader
+
+On Debian hosts:
+```
+sudo apt-get install systemd-container
+systemd-nspawn --bind-ro=/etc/resolv.conf --bind=/home/<user>/boot:/boot -D root -M archroot
+```
 
 ```
 pacman -S --needed linux-rpi raspberrypi-bootloader raspberrypi-firmware
