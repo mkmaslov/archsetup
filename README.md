@@ -1,111 +1,45 @@
 # Arch Linux installation guide
 
 This document provides detailed instructions for Arch Linux installation. It covers the following use cases:
-- a machine with x86-64 architecture used as a *personal computer* (desktop environment, internet browser, etc)
 - a machine with AArch64 architecture used as a *server* (headless node with Docker containers)
+- a machine with x86-64 architecture used as a *personal computer* (desktop environment, internet browser, etc)
+
 
 The contents are organised as follows: 
 
+- [Installing Arch Linux ARM on a server](#installing-arch-linux-arm-on-a-server)
+  * [Maintenance USB drive](#maintenance-usb-drive)
+    + [RaspberryPi OS CLI Setup](#raspberrypi-os-cli-setup)
+  * [Partitioning storage device and configuring full-disk non-AES encryption](#partitioning-storage-device-and-configuring-full-disk-non-aes-encryption)
+  * [Performing initial server setup and installing basic software](#performing-initial-server-setup-and-installing-basic-software)
+    + [Fixing U-Boot bootloader](#fixing-u-boot-bootloader)
+    + [Replacing U-Boot bootloader](#replacing-u-boot-bootloader)
+    + [CLI configuration of Wi-Fi connection](#cli-configuration-of-wi-fi-connection)
+    + [Setting up time synchronization](#setting-up-time-synchronization)
+    + [Configuring package managers](#configuring-package-managers)
+
 - [Installing Arch Linux on x64 machine](#installing-arch-linux-on-x64-machine)
   * [Creating installation medium](#creating-installation-medium)
-- [Arch Linux ARM](#arch-linux-arm)
-  * [Firmware maintenance drive](#firmware-maintenance-drive)
-    + [RaspberryPi OS CLI Setup](#raspberrypi-os-cli-setup)
-  * [Maintenance drive](#maintenance-drive)
-  * [Time synchronization](#time-synchronization)
- - [General tools](#general-tools)
-   * [CLI configuration of Wi-Fi connection](#cli-configuration-of-wi-fi-connection)
- - [Recommended software](#recommended-software)
-   * [Personal computer](#personal-computer)
-   * [Server](#server)
+  * [Partitioning hard drive and configuring full-disk AES encryption](#partitioning-hard-drive-and-configuring-full-disk-aes-encryption)
+  * [Performing initial PC setup and installing basic software](#performing-initial-pc-setup-and-installing-basic-software)
+  
+- [Recommended software](#recommended-software)
+  * [Personal computer](#personal-computer)
+  * [Server](#server)
   
  **DISCLAIMER:** author does not take responsibility for the problems that you may face while following this guide. In case you notice an error, have a suggestion or feel that a certain statement is unclear, you could provide feedback [here](https://github.com/mkmaslov/archlinux_setup_guide/issues). This guide does not contain any novel information, instead it represents a structured compilation of advice and tricks from Internet as well as some personal knowledge. Where possible, a reference to the original material or additional information is provided.
-    
-# Installing Arch Linux on x64 machine
+ 
+# Installing Arch Linux ARM on a server
 
-The instructions below were tested on several Lenovo Thinkpad laptops, [which usually offer great hardware support in Linux](https://www.lenovo.com/linux).
+This section covers installation of [Arch Linux ARM operating system](https://archlinuxarm.org/) on [Raspberry Pi 4 Model B](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/specifications/) **with [C0 stepping](https://www.jeffgeerling.com/blog/2021/raspberry-pi-4-model-bs-arriving-newer-c0-stepping)**.
 
-## Creating installation medium
+*References:*
+- [Arch Linux ARM64](https://archlinuxarm.org/forum/viewtopic.php?f=65&t=15994)
+- [Arch Linux ARM Encryption](https://gist.github.com/XSystem252/d274cd0af836a72ff42d590d59647928)
+- [Arch Linux Encryption](https://www.coded-with-love.com/blog/install-arch-linux-encrypted/)
+- [Linux hardening](https://www.pluralsight.com/blog/it-ops/linux-hardening-secure-server-checklist)
 
-*References*: [official Arch Linux installation guide](https://wiki.archlinux.org/title/Installation_guide) and [USB drive creation](https://wiki.archlinux.org/title/USB_flash_installation_medium).
-
-List all connected storage devices using `sudo lsblk -d` and choose the drive that will be used as an installation medium (further `/dev/sdX`). Unmount all of the selected drive's partitions and wipe the filesystem:
-```
-for partition in /dev/sdX?*; do sudo umount -q $partition; done
-sudo wipefs --all /dev/sdX
-```
-[Download](https://archlinux.org/download/) the latest Arch Linux image (`archlinux-x86_64.iso`) and its GnuPG signature (`archlinux-x86_64.iso.sig`). Put both files in the same folder and run a terminal instance there. Verify the signature:
-```console
-$ gpg --keyserver-options auto-key-retrieve --verify archlinux-x86_64.iso.sig archlinux-x86_64.iso
-gpg: Signature made Thu 01 Dec 2022 17:40:26 CET
-gpg:                using RSA key 4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC
-gpg: Good signature from "Pierre Schmitz <pierre@archlinux.de>" [unknown]
-gpg:                 aka "Pierre Schmitz <pierre@archlinux.org>" [unknown]
-gpg: WARNING: This key is not certified with a trusted signature!
-gpg:          There is no indication that the signature belongs to the owner.
-Primary key fingerprint: 4AA4 767B BC9C 4B1D 18AE  28B7 7F2D 434B 9741 E8A
-```
-Make sure that the primary key fingerprint matches PGP fingerprint from the [downloads page](https://archlinux.org/download/). This is especially important, if the signature file was downloaded from one of the mirror sites.
-
-After successfull image verification, write it to the selected drive:
-```
-sudo dd bs=4M if=archlinux-x86_64.iso of=/dev/sdX conv=fsync oflag=direct status=progress
-sudo sync
-```
-
-The aforementioned instructions are also available in the form of [**a shell script**](https://github.com/mkmaslov/archlinux_setup_guide/blob/main/create_USB.sh).
-
-To wipe the storage device after Arch Linux installation, the ISO 9660 filesystem signature needs to be removed:
-```
-sudo wipefs --all /dev/sdX
-```
-
-## Partitioning drive
-Installation on x86-64 requires EFI boot partition
-```
-fdisk /dev/nvme0n1
-```
-```
-g
-```
-```
-n
-```
-```
-+512M
-```
-```
-t
-```
-```
-1
-```
-```
-n
-```
-```
-t
-```
-```
-43
-```
-```
-w
-```
-
-## Full-disk encryption
-```
-cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 /dev/nvme0n1p2
-```
-
-## Installing packages
-```
-pacstrap -something wpa_supplicant dhcpcd
-```
-
-# Arch Linux ARM
-
-## Firmware maintenance drive
+## Maintenance USB drive
 
 ### RaspberryPi OS CLI Setup
 To set up larger font size in console:
@@ -113,11 +47,76 @@ To set up larger font size in console:
 sudo dpkg-reconfigure console-setup
 ```
 
-## Maintenance drive
+## Partitioning storage device and configuring full-disk non-AES encryption
+```
+sudo fdisk /dev/sda
+o (new partition table)
+n (new partition)
++512M
+t (type)
+c (FAT32)
+n (new partition)
+t (type)
+8e (Linux LVM)
+w (write changes)
+```
+Host system needs to have `lvm2` enabled.
+```
+>> sudo mkfs.vfat /dev/sda1
+>> modprobe dm-crypt
+>> cryptsetup luksFormat -c xchacha12,aes-adiantum-plain64 /dev/sda2
+>> cryptsetup open --type luks /dev/sda2 lvm
+>>  pvcreate /dev/mapper/lvm
+>>  vgcreate main /dev/mapper/lvm
+>>  lvcreate -L10G main -n swap
+>>  lvcreate -l 100%FREE main -n root
+>>  mkswap /dev/mapper/main-swap
+>>  mkfs.ext4 /dev/mapper/main-root
+>>  mount /dev/sda1 boot
+>>  mount /dev/mapper/main-root root
+```
 
-## Partitioning drive
+## Performing initial server setup and installing basic software
 
-## Time synchronization
+### Fixing U-Boot bootloader
+
+*References*: [how to fix U-Boot in Arch Linux ARM on RPi4b with C0 stepping](https://archlinuxarm.org/forum/viewtopic.php?f=67&t=15422&start=20#p67299).
+
+C0 stepping [breaks some bootloaders](https://raspberrypi.stackexchange.com/questions/119356/differences-between-b0-and-c0-steppings-of-the-bcm2711).
+
+At the moment of writing, the default boot manager in Arch Linux ARM (U-Boot) is outdated. Out-of-the-box it does not support C0 stepping of Broadcom BCM2711. Thus said, if just following the [AArch64 installation instructions](https://archlinuxarm.org/platforms/armv8/broadcom/raspberry-pi-4) the system won't boot. Fixing U-Boot requires an external Linux machine.
+
+First, one needs to change all instances of `fdt_addr_r` to `fdt_addr` in `boot/boot.txt`.
+Secondly, one needs to install `uboot-tools` and recompile the boot script (`boot/boot.scr`):
+```
+cd boot
+mkimage -A arm -T script -O linux -d boot.txt boot.scr
+```
+
+### Replacing U-Boot bootloader
+
+```
+pacman -S --needed linux-rpi raspberrypi-bootloader raspberrypi-firmware
+```
+
+
+### Setting up correct fstab
+
+Finally, one needs to use correct `/etc/fstab`:
+```console
+$ cat /etc/fstab
+
+# Static information about the filesystems.
+# See fstab(5) for details.
+
+# <file system>  <dir>  <type>  <options>  <dump>  <pass>
+/dev/sda1        /boot  vfat    defaults   0       0
+/dev/sda2        /      ext4    defaults   0       0
+```
+
+
+
+### Setting up time synchronization
 
 The very first thing that needs to be set up after the network is functioning is [time synchronization](https://wiki.archlinux.org/title/Systemd-timesyncd). Without a properly synchronized clock many essential tools may not work. For instance, `pacman -Syu` may fail due to time inconsistencies in GPG signatures, which may subsequently lead to a non-bootable setup[^C1].
 
@@ -160,6 +159,37 @@ Root distance: 231.856ms (max: 5s)
        Jitter: 7.343ms
  Packet count: 2
     Frequency: +267.747ppm
+```
+
+### Basic configuration
+```console
+$ nano /etc/locale.gen
+en_US.UTF-8 UTF-8
+$ locale-gen
+$ ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+$ nano /etc/locale.conf
+LANG=en_US.UTF-8
+$ nano /etc/vconsole.conf
+KEYMAP=en
+FONT=ter-132b
+```
+
+
+### Configuring package managers
+
+*References*: [official Arch Linux ARM installation guide](https://archlinuxarm.org/platforms/armv8/broadcom/raspberry-pi-4)
+
+Automatic choice of pacman mirrors based on geolocation does not work, so one needs to edit `/etc/pacman.d/mirrorlist` and uncomment the desired mirror, i.e.:
+```console
+$ nano /etc/pacman.d/mirrorlist
+# Server = http://mirror...
+Server = http://eu.mirror...
+```
+
+```
+pacman-key --init
+pacman-key --populate archlinuxarm
+pacman -Syu
 ```
 
 # General tools
@@ -223,6 +253,88 @@ systemctl enable dhcpcd@<interface>.service
 **Disclaimer:** this guide was written for the ease-of-access purposes only. 
 
 All the information is taken from: [wpa_supplicant (ArchWiki)](https://wiki.archlinux.org/title/Wpa_supplicant) and [dhcpcd (ArchWiki)](https://wiki.archlinux.org/title/Dhcpcd).
+    
+# Installing Arch Linux on x64 machine
+
+The instructions below were tested on several Lenovo Thinkpad laptops, [which usually offer great hardware support in Linux](https://www.lenovo.com/linux).
+
+## Creating installation medium
+
+*References*: [official Arch Linux installation guide](https://wiki.archlinux.org/title/Installation_guide) and [USB drive creation](https://wiki.archlinux.org/title/USB_flash_installation_medium).
+
+List all connected storage devices using `sudo lsblk -d` and choose the drive that will be used as an installation medium (further `/dev/sdX`). Unmount all of the selected drive's partitions and wipe the filesystem:
+```
+for partition in /dev/sdX?*; do sudo umount -q $partition; done
+sudo wipefs --all /dev/sdX
+```
+[Download](https://archlinux.org/download/) the latest Arch Linux image (`archlinux-x86_64.iso`) and its GnuPG signature (`archlinux-x86_64.iso.sig`). Put both files in the same folder and run a terminal instance there. Verify the signature:
+```console
+$ gpg --keyserver-options auto-key-retrieve --verify archlinux-x86_64.iso.sig archlinux-x86_64.iso
+gpg: Signature made Thu 01 Dec 2022 17:40:26 CET
+gpg:                using RSA key 4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC
+gpg: Good signature from "Pierre Schmitz <pierre@archlinux.de>" [unknown]
+gpg:                 aka "Pierre Schmitz <pierre@archlinux.org>" [unknown]
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+Primary key fingerprint: 4AA4 767B BC9C 4B1D 18AE  28B7 7F2D 434B 9741 E8A
+```
+Make sure that the primary key fingerprint matches PGP fingerprint from the [downloads page](https://archlinux.org/download/). This is especially important, if the signature file was downloaded from one of the mirror sites.
+
+After successfull image verification, write it to the selected drive:
+```
+sudo dd bs=4M if=archlinux-x86_64.iso of=/dev/sdX conv=fsync oflag=direct status=progress
+sudo sync
+```
+
+The aforementioned instructions are also available in the form of [**a shell script**](https://github.com/mkmaslov/archlinux_setup_guide/blob/main/create_USB.sh).
+
+To wipe the storage device after Arch Linux installation, the ISO 9660 filesystem signature needs to be removed:
+```
+sudo wipefs --all /dev/sdX
+```
+
+## Partitioning hard drive and configuring full-disk AES encryption
+
+Installation on x86-64 requires EFI boot partition
+```
+fdisk /dev/nvme0n1
+```
+```
+g
+```
+```
+n
+```
+```
++512M
+```
+```
+t
+```
+```
+1
+```
+```
+n
+```
+```
+t
+```
+```
+43
+```
+```
+w
+```
+```
+cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 /dev/nvme0n1p2
+```
+
+## Performing initial PC setup and installing basic software
+
+```
+pacstrap -something wpa_supplicant dhcpcd
+```
 
 # Recommended software
 
