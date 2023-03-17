@@ -19,10 +19,18 @@ The contents are organised as follows:
     + [Configuring package managers](#configuring-package-managers)
     + [Additional configuration and post-install](#additional-configuration-and-post-install)
 
-- [Installing Arch Linux on x64 machine](#installing-arch-linux-on-x64-machine)
-  * [Creating installation medium](#creating-installation-medium)
-  * [Partitioning hard drive and configuring full-disk AES encryption](#partitioning-hard-drive-and-configuring-full-disk-aes-encryption)
-  * [Performing initial PC setup and installing basic software](#performing-initial-pc-setup-and-installing-basic-software)
+- [Instal Arch Linux on x64 machine](#instal-arch-linux-on-x64-machine)
+  * [Create installation medium](#create-installation-medium)
+  * [Check Secure Boot mode and UEFI mode](#check-secure-boot-mode-and-uefi-mode)
+  * [Activate network connection](#activate-network-connection)
+  * [Partition disks and configure full-disk encryption](#partition-disks-and-configure-full-disk-encryption)
+  * [Install packages and change root](#install-packages-and-change-root)
+  * [Configure the system](#configure-the-system)
+  * [Configure disk mapping](#configure-disk-mapping)
+  * [Create Unified Kernel Image](#create-unified-kernel-image)
+  * [Configure Secure Boot](#configure-secure-boot)
+  * [Add UEFI boot entries](#add-uefi-boot-entries)
+  * [Reboot into BIOS and enable Secure Boot](#reboot-into-bios-and-enable-secure-boot)
   
 - [Recommended software](#recommended-software)
   * [Personal computer](#personal-computer)
@@ -194,7 +202,7 @@ All the information is taken from: [wpa_supplicant (ArchWiki)](https://wiki.arch
 
 ### Setting up time synchronization
 
-The very first thing that needs to be set up after the network is functioning is [time synchronization](https://wiki.archlinux.org/title/Systemd-timesyncd). Without a properly synchronized clock many essential tools may not work. For instance, `pacman -Syu` may fail due to time inconsistencies in GPG signatures, which may subsequently lead to a non-bootable setup[^C1].
+The very first thing that needs to be set up after the network is functioning is [time synchronization](https://wiki.archlinux.org/title/Systemd-timesyncd)[^C1]. 
 
 In Arch Linux ARM, by default, `systemd-networkd.service` is enabled, while this guide suggests using `wpa_supplicant.service` and `dhcpcd.service`. When both of these options are enabled, `systemd-timesyncd.service` fails to update the clock at boot. Therefore, if following this guide, make sure to disable the `systemd-networkd.service`:
 ```
@@ -276,11 +284,13 @@ setfont ter-132b
 
 
     
-# Installing Arch Linux on x64 machine
+# Instal Arch Linux on x64 machine
 
-The instructions below were tested on several Lenovo Thinkpad laptops, [which usually offer great hardware support in Linux](https://www.lenovo.com/linux).
+*References:* [guide](https://wiki.archlinux.org/title/User:Bai-Chiang/Installation_notes#Reboot_into_BIOS) by [Bai-Chiang](https://github.com/Bai-Chiang) and [guide](https://www.coded-with-love.com/blog/install-arch-linux-encrypted/) by [Florian Brinker](https://github.com/fbrinker).
 
-## Creating installation medium
+The instructions below were tested on several Lenovo Thinkpad laptops, [which usually offer great hardware support in Linux](https://www.lenovo.com/linux), and on Lenovo Yoga Pro X (Intel version), which required some tinkering.
+
+## Create installation medium
 
 *References*: [official Arch Linux installation guide](https://wiki.archlinux.org/title/Installation_guide) and [USB drive creation](https://wiki.archlinux.org/title/USB_flash_installation_medium).
 
@@ -317,65 +327,329 @@ sudo wipefs --all /dev/sdX
 
 ## Check Secure Boot mode and UEFI mode
 
-Enter BIOS, e.g., using Fn+F2 button combination on Lenovo laptops. Navigate to "Security" section, disable Secure Boot, reset Secure Boot to Setup Mode and restore Factory Keys (PK,KEK,db and dbx).
+Enter BIOS (`Fn+F2` key combination on Lenovo laptops), navigate to the `Security` section, restore Factory Keys (PK,KEK,db and dbx), reset Secure Boot to `Setup Mode` and disable Secure Boot. Boot into Live ISO (`Fn+F12` key combination on Lenovo laptops), select keyboard layout and font (use `ter-132b` for HiDPI displays):
+```
+loadkeys us && setfont ter-132b
+```
+Then, verify Secure Boot status:
+```console
+$ bootctl status | grep "Secure Boot"
+...
+Secure Boot: disabled (setup)
+...
+```
+Verify current boot options:
+```console
+$ efibootmgr
+BootCurrent: 0004
+BootNext: 0003
+BootOrder: 0004,0000,0001,0002,0003
+Timeout: 30 seconds
+Boot0000* Diskette Drive(device:0)
+Boot0001* CD-ROM Drive(device:FF)
+Boot0002* Hard Drive(Device:80)/HD(Part1,Sig00112233)
+Boot0003* PXE Boot: MAC(00D0B7C15D91)
+Boot0004* Linux
+```
+and remove unused options if necessary:
+```
+efibootmgr -b 0004 -B
+```
 
-## Partitioning hard drive and configuring full-disk AES encryption
-
-Installation on x86-64 requires EFI boot partition
-
-Check if EFI is enabled:
+Verify that the system is booted in UEFI mode. Output of:
 ```
 ls /sys/firmware/efi/efivars
 ```
-output should be non-empty.
+should be non-empty.
 
-Partition drive: 
-```
-fdisk /dev/nvme0n1
-g
-n
-+512M
-t
-1
-n
-t
-43
-w
-```
-note that PC setup requires GPT partition table and EFI-type boot partition.
+## Activate network connection
 
-Fastest algorithm on hardware with AES acelaration:
+Either connect via network cable or connect using `iwctl`:
 ```
-cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 /dev/nvme0n1p2
+iwctl
+device list
+station wlan0 connect <YOUR-SSID>
+dhcpcd wlan0
+ping archlinux.org
+```
+Synchronize system clock[^C1]:
+```
+timedatectl set-ntp true
 ```
 
-## Performing initial PC setup and installing basic software
+## Partition disks and configure full-disk encryption
+
+Use `gdisk` to create GPT partition table with two partitions -- EFI-type boot partition and LVM-type root partition:
+```console
+$ lsblk
+NAME            MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINTS 
+sdX      8:16   1 119.5G  0 disk
+$ gdisk /dev/sdX
+GPT fdisk (gdisk) version 1.0.9.1
+
+Partition table scan:
+  MBR: protective
+  BSD: not present
+  APM: not present
+  GPT: present
+
+Found valid GPT with protective MBR; using GPT.
+
+Command (? for help): o
+This option deletes all partitions and creates a new protective MBR.
+Proceed? (Y/N): Y
+
+Command (? for help): n
+Partition number (1-128, default 1): 
+First sector (34-62668766, default = 2048) or {+-}size{KMGTP}: 
+Last sector (2048-62668766, default = 62666751) or {+-}size{KMGTP}: +512M
+Current type is 8300 (Linux filesystem)
+Hex code or GUID (L to show codes, Enter = 8300): ef00
+Changed type of partition to 'EFI system partition'
+
+Command (? for help): n
+Partition number (2-128, default 2): 
+First sector (34-62668766, default = 1050624) or {+-}size{KMGTP}: 
+Last sector (1050624-62668766, default = 62666751) or {+-}size{KMGTP}: -18G
+Current type is 8300 (Linux filesystem)
+Hex code or GUID (L to show codes, Enter = 8300):
+Changed type of partition to 'Linux filesystem'
+
+Command (? for help): n
+Partition number (3-128, default 3): 
+First sector (34-62668766, default = 24920064) or {+-}size{KMGTP}: 
+Last sector (24920064-62668766, default = 62666751) or {+-}size{KMGTP}: 
+Current type is 8300 (Linux filesystem)
+Hex code or GUID (L to show codes, Enter = 8300): 8200
+Changed type of partition to 'Linux swap'
+
+Command (? for help): p
+Disk /dev/sdX: 62668800 sectors, 29.9 GiB
+Model: Flash Drive     
+Sector size (logical/physical): 512/512 bytes
+Disk identifier (GUID): B021BC12-F035-4191-A7AA-02E8C2085556
+Partition table holds up to 128 entries
+Main partition table begins at sector 2 and ends at sector 33
+First usable sector is 34, last usable sector is 62668766
+Partitions will be aligned on 2048-sector boundaries
+Total free space is 4062 sectors (2.0 MiB)
+
+Number  Start (sector)    End (sector)  Size       Code  Name
+   1            2048         1050623   512.0 MiB   EF00  EFI system partition
+   2         1050624        24920030   11.4 GiB    8300  Linux filesystem
+   3        24920064        62666751   18.0 GiB    8200  Linux swap
+
+Command (? for help): w
+
+Final checks complete. About to write GPT data. THIS WILL OVERWRITE EXISTING
+PARTITIONS!!
+
+Do you want to proceed? (Y/N): Y
+OK; writing new GUID partition table (GPT) to /dev/sdX.
+Warning: The kernel is still using the old partition table.
+The new table will be used at the next reboot or after you
+run partprobe(8) or kpartx(8)
+The operation has completed successfully.
+```
+Load `dm-crypt` kernel module and benchmark encryption algorithms:
+```
+modprobe dm-crypt && cryptsetup benchmark
+```
+Usually, `aes-xts-plain64` will be the fastest method (on hardware that supports AES accelaration). Set `4096 bytes` as sector size (if using NVMe), `512 byte` key length and encrypt the second partition:
+```
+cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 --sector-size 4096 --verify-passphrase --verbose /dev/sdX2
+```
+Now, open the partition:
+```
+cryptsetup open /dev/sdX2 cryptroot
+```
+This will open `/dev/sdX2` to new disk device `/dev/mapper/cryptroot`.
+
+Format and mount all partitions:
+```
+mkfs.ext4 /dev/mapper/cryptroot
+mount /dev/mapper/cryptroot /mnt
+
+mkfs.fat -F 32 /dev/sdX1
+mkdir /mnt/efi
+mount /dev/sdX1 /mnt/efi
+
+mkswap /dev/sdX3
+swapon /dev/sdX3
+```
+
+## Install packages and change root
+```
+pacstrap -K /mnt base base-devel linux linux-firmware man-db man-pages texinfo nano terminus-font
+```
+Additionally, one should consider installing the following packages:
+- `intel-ucode` to acquire updated CPU microcode
+- `sbctl` to create and enroll Secure Boot keys
+- `efibootmgr` to create custom UEFI boot entries
+- `wpa_supplicant` and `networkmanager` for Internet connectivity
+- `alsa-firmware`, `sof-firmware` and `alsa-ucm-conf` to assure functionality of the soundcard
+- minimal subset of packages from `gnome` group, `gnome-keyring`, `gnome-tweaks` and `gnome-bluetooth` to enable desktop environment
+
+Change root into `/mnt` and enable newly installed services:
+```
+arch-chroot /mnt
+export PS1="(chroot) ${PS1}"
+systemctl enable systemd-resolved.service
+systemctl enable NetworkManager.service
+systemctl enable wpa_supplicant.service
+systemctl enable gdm.service
+```
+Set up root password using `passwd`.
+
+## Configure the system
+Configure system clock[^C1]:
+```
+ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+hwclock --systohc
+timedatectl set-ntp true
+```
+Configure localization. Uncomment `en_IE.UTF-8 UTF-8` in `/etc/locale.gen`, then:
+```
+locale-gen
+echo "LANG=en_IE.UTF-8" > /etc/locale.conf
+echo "KEYMAP=us\nFONT=ter-132b" > /etc/vconsole.conf
+``` 
+Configure local network properties:
+```console
+$ echo <HOSTNAME> > /etc/hostname
+$ nano /etc/hosts
+127.0.0.1  localhost <HOSTNAME>
+::1        localhost <HOSTNAME>
+127.0.1.1  <HOSTNAME>.localdomain <HOSTNAME>
+```
+Add non-root user and set their password:
+```
+useradd -m <NAME>
+passwd <NAME>
+```
+**TO-DO:** disable root login, add user to sudoers, enable Gnome auto login.
+
+Configure `mkinitcpio`:
+```console
+$ nano /etc/mkinitcpio.conf
+...
+HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt filesystems fsck)
+...
+```
+## Configure disk mapping
+Configure `crypttab`:
+```console
+$ nano /etc/crypttab.initramfs
+cryptroot  UUID=<ROOT-UUID>  -  password-echo=no,no-read-workqueue,no-write-workqueue,discard
+```
+Use `lsblk -f` to determine `<ROOT-UUID>`, options `no-read-workqueue,no-write-workqueue,discard` increase SSD performance.
+
+Set up swap encryption. First, deactivate swap partition:
+```
+swapoff /dev/sdX3
+```
+Create `1M` sized `ext2` filesystem with label `cryptswap`:
+```
+mkfs.ext2 -F -F -L cryptswap /dev/sdX3 1M
+```
+Edit `/etc/crypttab`:
+```console
+$ nano /etc/crypttab
+#  <name>     <device>          <password>    <options>
+   cryptswap  UUID=<SWAP-UUID>  /dev/urandom  swap,offset=2048
+```
+Use `lsblk -f` to determine `<SWAP-UUID>`, option `offset` is the offset from the partition's first sector in 512-byte sectors (`1MiB=2048*512B`).
+
+Configure `/etc/fstab`:
+```console
+$ nano /etc/fstab
+#  <filesystem>           <dir>  <type>  <options>  <dump>  <pass>
+   /dev/sdX1              /efi   vfat    defaults,ssd   0   0
+   /dev/mapper/cryptroot  /      ext4    defaults,ssd   0   0
+   /dev/mapper/cryptswap  none   swap    defaults       0   0
+```
+
+## Create Unified Kernel Image
+
+Create `/etc/kernel/cmdline` and `/etc/kernel/cmdline_fallback`:
+```console
+$ nano /etc/kernel/cmdline
+root=/dev/mapper/cryptroot rw i8042.direct i8042.dumbkbd
+$ nano /etc/kernel cmdline_fallback
+root=/dev/mapper/cryptroot rw i8042.direct i8042.dumbkbd
+```
+Kernel parameters `i8042.direct` and `i8042.dumbkbd` are required to enable built-in keyboard on Lenovo Yoga Pro X. After successfull installation, one can also include kernel parameter `quiet` to suppress debug messages at boot.
+
+Modify `/etc/mkinitcpio.d/linux.preset`:
+```console
+# mkinitcpio preset file for the 'linux' package
+
+ALL_config="/etc/mkinitcpio.conf"
+ALL_kver="/boot/vmlinuz-linux"
+ALL_microcode=(/boot/*-ucode.img)
+
+PRESETS=('default' 'fallback')
+
+#default_config="/etc/mkinitcpio.conf"
+#default_image="/boot/initramfs-linux.img"
+default_options=""
+default_uki="/efi/EFI/Linux/Archlinux-linux.efi"
+
+#fallback_config="/etc/mkinitcpio.conf"
+#fallback_image="/boot/initramfs-linux-fallback.img"
+fallback_options="-S autodetect --cmdline /etc/kernel/cmdline_fallback"
+fallback_uki="/efi/EFI/Linux/Archlinux-linux-fallback.efi"
+```
+Create `/efi/EFI/Linux` folder and regenerate `initramfs`:
+```
+mkdir /efi/EFI/Linux && mkinitcpio -P
+```
+Finally, remove any leftover `initramfs-*.img` from `/boot` or `/efi`. 
+
+## Configure Secure Boot
+
+Create keys:
+```
+sbctl create-keys
+```
+Enroll keys (sometimes `--microsoft` option is needed):
+```
+sbctl enroll-keys
+```
+Sign both unified kernel images:
+```
+sbctl sign --save /efi/EFI/Linux/ArchLinux-linux.efi
+sbctl sign --save /efi/EFI/Linux/ArchLinux-linux-fallback.efi
+```
+
+## Add UEFI boot entries
 
 ```
-pacstrap -something wpa_supplicant dhcpcd lvm2
+efibootmgr --create --disk /dev/sdX --part 1 --label "ArchLinux-linux" --loader "EFI\\Linux\\ArchLinux-linux.efi"
+efibootmgr --create --disk /dev/sdX --part 1 --label "ArchLinux-linux-fallback" --loader "EFI\\Linux\\ArchLinux-linux-fallback.efi"
+```
+Option `--disk` denotes the physical disk containing boot loader (`/dev/sdX` not `/dev/sdX1`), option `--part` specifies the partition number (`1` for `/dev/sdX1`). 
+
+Display current boot options. Change boto order, if necessary:
+```console
+$ efibootmgr
+BootCurrent: 0004
+BootNext: 0003
+BootOrder: 0004,0000,0001,0002,0003
+Timeout: 30 seconds
+Boot0000* Diskette Drive(device:0)
+Boot0001* CD-ROM Drive(device:FF)
+Boot0002* Hard Drive(Device:80)/HD(Part1,Sig00112233)
+Boot0003* PXE Boot: MAC(00D0B7C15D91)
+Boot0004* Linux
+Boot0005* Linux
+$ efibootmgr --bootorder 0003,0004,0005
 ```
 
-## DUMP
-```
->>  pacman -S lvm2 man-db man-pages texinfo terminus-font
->>  nano /etc/fstab
-/dev/sda1   /boot   vfat  defaults   0   0
-/dev/mapper/main-root   /root   ext4   defaults   0   0
-/dev/mapper/main-swap   none   swap   defaults   0   0
->>  nano /etc/mkinitcpio.conf
-HOOKS=(base udev autodetect modconf block keyboard encrypt lvm2 filesystems fsck)
->>  mkinitcpio -P
->>  passwd
-<root password>
->>  nano /boot/cmdline.txt
-cryptdevice=/dev/sda2:main root=/dev/mapper/main-root resume=/dev/mapper/main-swap
->>  nano /etc/hostname
-<hostname>
->>  nano /etc/hosts
-127.0.0.1  localhost my-laptop
-::1        localhost my-laptop
-127.0.1.1  my-laptop.localdomain my-laptop
->>  setfont ter-132b
+## Reboot into BIOS and enable Secure Boot
+```console
+umount -R /mnt
+systemctl reboot --firmware-setup
 ```
 
 # Recommended software
@@ -383,9 +657,9 @@ cryptdevice=/dev/sda2:main root=/dev/mapper/main-root resume=/dev/mapper/main-sw
 ## Personal computer
 
 - **Mozilla Firefox**
-  * change settings for privacy
-  * Bitwarden extension
-  * uBlock Origin extension with Legitimate URLs list
+  * set up privacy-friendly settings
+  * instal Bitwarden and uBlock Origin extensions
+  * enable most of the filter lists, install Legitimate URLs list
   * Additional reading: [1](https://www.reddit.com/r/privacy/comments/d3obxq/firefox_privacy_guide/), [2](https://www.reddit.com/r/privacytoolsIO/comments/ldrhso/firefox_privacy_extensions/gm8g1x2/?context=3), [3](https://anonyome.com/2020/04/why-compartmentalization-is-the-most-powerful-data-privacy-strategy/) and [4](https://github.com/arkenfox/user.js/wiki/4.1-Extensions)
   
 - **Tor Browser** -- for anonymous Internet surfing
@@ -402,26 +676,15 @@ cryptdevice=/dev/sda2:main root=/dev/mapper/main-root resume=/dev/mapper/main-sw
   * Wolfram language extension
 
 ## Server
-
-- **Seafile** -- end-to-end encrypted open source file synchronization service.
+- **Seafile** is end-to-end encrypted open source file synchronization service.
  See [server manual](https://manual.seafile.com/deploy/) and [download for ARM](https://github.com/haiwen/seafile-rpi/releases).
- 
- - **EteBase** -- end-to-end encrypted open source contact and calendar service. See [GitHub page](https://github.com/etesync/server).
- 
- - **Standard notes** -- end-to-end encrypted open source note taking service. See [self-hosting guide](https://docs.standardnotes.com/self-hosting/docker).
- 
+ - **EteBase** is end-to-end encrypted open source contact and calendar service. See [GitHub page](https://github.com/etesync/server).
+ - **Standard notes** is end-to-end encrypted open source note taking service. See [self-hosting guide](https://docs.standardnotes.com/self-hosting/docker).
  - **Bitwarden**
- 
  - **Navidrome**
- 
  - **PiHole**
+ - [Other options](https://github.com/pluja/awesome-privacy)
  
- [Other ideas](https://github.com/pluja/awesome-privacy#photo-storage)
- 
- 
-
 
 # Comments
-[^C1]: I once broke my installation by running `pacman -Syu` on a system with an unsynchronized clock. The operation freezed with "GPG key from the future" error. After reboot, `initramfs.img` was corrupted and the system was not booting.
-
-
+[^C1]: Without a properly synchronized clock many essential tools won't work. For instance, `pacman -Syu` will fail due to time inconsistencies in GPG signatures (*"GPG key from the future"* error), which may subsequently lead to a non-bootable system if `pacman` fails to regenerate `initramfs`.
