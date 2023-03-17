@@ -315,6 +315,10 @@ To wipe the storage device after Arch Linux installation, the ISO 9660 filesyste
 sudo wipefs --all /dev/sdX
 ```
 
+## Check Secure Boot mode and UEFI mode
+
+Enter BIOS, e.g., using Fn+F2 button combination on Lenovo laptops. Navigate to "Security" section, disable Secure Boot, reset Secure Boot to Setup Mode and restore Factory Keys (PK,KEK,db and dbx).
+
 ## Partitioning hard drive and configuring full-disk AES encryption
 
 Installation on x86-64 requires EFI boot partition
