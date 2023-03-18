@@ -19,12 +19,12 @@ message "Verifying image signature"
 gpg --keyserver-options auto-key-retrieve --verify archlinux-x86_64.iso.sig archlinux-x86_64.iso
 message "The output above should contain \"Good signature from ...\" line."
 message "Additionally, you need to compare the fingerprint above with the official PGP fingerprint (from https://archlinux.org/download/)."
-question "Do you want to proceed? [y/n]: "
+question "Do you want to proceed? [y/N]: "
 if [ $answer == "y" ]; then
 	message "List of connected storage devices"
 	sudo lsblk -a -d -o PATH,SIZE
 	warning "WARNING: the chosen drive will be erased!"
-	question "Choose drive [PATH]: "
+	question "Choose drive [PATH, e.g. /dev/sdX]: "
 	message "Creating installation medium on ${answer}"
 	for partition in $answer?*; do sudo umount -q $partition; done
 	sudo wipefs --all $answer
@@ -35,5 +35,6 @@ else
 	warning "Creation procedure failed"
 fi
 cd ..
-sudo rm -rf create_USB_temp
-
+question "Do you want to remove the downloaded iso? [y/N]"
+if [ $answer == "y" ]; then
+	sudo rm -rf create_USB_temp
