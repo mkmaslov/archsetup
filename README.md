@@ -540,7 +540,7 @@ HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt
 Configure `crypttab`:
 ```console
 $ nano /etc/crypttab.initramfs
-cryptroot  UUID=<ROOT-UUID>  -  password-echo=no,no-read-workqueue,no-write-workqueue,discard
+cryptroot  UUID=<ROOT-UUID>  -  password-echo=no,x-systemd.device-timeout=0,timeout=0,no-read-workqueue,no-write-workqueue,discard
 ```
 Use `lsblk -f` to determine `<ROOT-UUID>`, options `no-read-workqueue,no-write-workqueue,discard` increase SSD performance.
 
