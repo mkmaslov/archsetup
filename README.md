@@ -602,7 +602,7 @@ fallback_uki="/efi/EFI/Linux/Archlinux-linux-fallback.efi"
 ```
 Create `/efi/EFI/Linux` folder and regenerate `initramfs`:
 ```
-mkdir /efi/EFI/Linux && mkinitcpio -P
+mkdir /efi && mkdir /efi/EFI && mkdir /efi/EFI/Linux && mkinitcpio -P
 ```
 Finally, remove any leftover `initramfs-*.img` from `/boot` or `/efi`. 
 
