@@ -4,9 +4,10 @@ set -e
 
 # Highlight a message.
 yellow="\e[1;33m" && red="\e[1;31m" && green="\e[1;32m" && color_off="\e[0m"
-function say () { echo -ne "${yellow}$1${color_off}";}
-function error () { echo -ne "${red}$1${color_off}";}
-function success () { echo -ne "${red}$1${color_off}";}
+function say () { echo -e "${yellow}$1${color_off}";}
+function status () { echo -ne "${yellow}$1${color_off}";}
+function error () { echo -e "${red}$1${color_off}";}
+function success () { echo -e "${green}$1${color_off}";}
 
 # Prompt for a response.
 function ask () { 
@@ -26,7 +27,7 @@ loadkeys us && setfont ter-132b && clear
 say "\n** Arch Linux Installation **\n"
 
 # Test Internet connection.
-say "Testing Internet connection: "
+status "Testing Internet connection: "
 ping -w 5 archlinux.org &>/dev/null
 further=$?
 if [ $further -ne 0 ]; then
