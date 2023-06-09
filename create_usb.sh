@@ -29,7 +29,7 @@ if [[ $response =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   ask "This will delete all the data on $disk. Do you agree [y/N]? "
   if [[ $response =~ ^(yes|y|Y|YES|Yes)$ ]]; then
     # Return "true", if umount throws "not mounted" error
-    umount -q $disk?* || /bin/true
+    umount -q $disk?* || /bin/true && sudo wipefs --all $disk
     sudo dd bs=4M if=archlinux-x86_64.iso of=$disk \
       conv=fsync oflag=direct status=progress
     sudo sync && sudo eject $disk
