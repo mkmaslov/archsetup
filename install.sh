@@ -111,44 +111,41 @@ say "Installing packages."
 # Installing basic Arch Linux system with hardened Linux kernel
 pacstrap -K /mnt base linux-hardened linux-firmware
 arch-chroot /mnt /bin/bash -e <<EOF
-
-  # Select timezone and synchronize clock.
-  ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
-  systemctl enable systemd-timesyncd.service &>/dev/null
-  hwclock --systohc
-  timedatectl set-ntp true &>/dev/null
-  
-  # Install CPU-specific microcode.
-  pacman -S ${MICROCODE}
-  # Install BIOS, UEFI and Secure Boot tools.
-  pacman -S fwupd efibootmgr sbctl
-  # Install Linux documentation tools.
-  pacman -S man-db man-pages texinfo
-  # Install CLI tools.
-  pacman -S zsh neovim btop
-  # Install fonts.
-  pacman -S terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts
-  # Install networking software.
-  pacman -S networkmanager wpa_supplicant
-  systemctl enable NetworkManager &>/dev/null
-  systemctl enable wpa_supplicant.service &>/dev/null
-  systemctl enable systemd-resolved.service &>/dev/null
-  # Install desktop environment.
-  pacman -S gnome-console gdm gnome-control-center gnome-disk-utility gnome-shell-extensions gnome-tweaks
-  systemctl enable gdm.service &>/dev/null
-  # Installing system utilities.
-  pacman -S exfatprogs nautilus sushi gnome-disk-utility
-  # Install applications.
-  pacman -S calibre inkscape vlc signal-desktop telegram-desktop
-  # Progs for VM: easytag, unrar, lmms, tuxguitar, pdfarranger, libreofice-fresh
-
-  # Set up users.
-  say "Now, you will be prompted for the root password."
-  passwd
-  ask "Please enter username of a non-root user:" && username="$RESPONSE"
-  useradd -m $USERNAME
-  say "Now, you will be prompted for the $USERNAME's password."
-  passwd $USERNAME
+# Select timezone and synchronize clock.
+ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+systemctl enable systemd-timesyncd.service &>/dev/null
+hwclock --systohc
+timedatectl set-ntp true &>/dev/null
+# Install CPU-specific microcode.
+pacman -S ${MICROCODE}
+# Install BIOS, UEFI and Secure Boot tools.
+pacman -S fwupd efibootmgr sbctl
+# Install Linux documentation tools.
+pacman -S man-db man-pages texinfo
+# Install CLI tools.
+pacman -S zsh neovim btop
+# Install fonts.
+pacman -S terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts
+# Install networking software.
+pacman -S networkmanager wpa_supplicant
+systemctl enable NetworkManager &>/dev/null
+systemctl enable wpa_supplicant.service &>/dev/null
+systemctl enable systemd-resolved.service &>/dev/null
+# Install desktop environment.
+pacman -S gnome-console gdm gnome-control-center gnome-disk-utility gnome-shell-extensions gnome-tweaks
+systemctl enable gdm.service &>/dev/null
+# Installing system utilities.
+pacman -S exfatprogs nautilus sushi gnome-disk-utility
+# Install applications.
+pacman -S calibre inkscape vlc signal-desktop telegram-desktop
+# Progs for VM: easytag, unrar, lmms, tuxguitar, pdfarranger, libreofice-fresh
+# Set up users.
+say "Now, you will be prompted for the root password."
+passwd
+ask "Please enter username of a non-root user:" && username="$RESPONSE"
+useradd -m $USERNAME
+say "Now, you will be prompted for the $USERNAME's password."
+passwd $USERNAME
 EOF
 
 # Set hostname.
