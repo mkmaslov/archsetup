@@ -94,7 +94,7 @@ mkswap $SWAP && swapon $SWAP
 # Set up LUKS encryption for the root partition.
 say "Setting up full-disk encryption. You will be prompted for a password."
 modprobe dm-crypt
-cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 --sector-size 4096 --verify-passphrase --verbose $CRYPTROOT
+cryptsetup luksFormat --cipher=aes-xts-plain64 --key-size=512 --sector-size 4096 --verify-passphrase --verbose $CRYPTROOT
 say "Opening the LUKS Container. You will be prompted for the password."
 cryptsetup open $CRYPTROOT cryptroot
 
