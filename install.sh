@@ -109,14 +109,12 @@ mount $EFI /mnt/efi
 pacman -Sy
 say "Installing packages."
 # Installing basic Arch Linux system with hardened Linux kernel
-pacstrap -K /mnt base linux-hardened linux-firmware
+pacstrap -K /mnt base linux-hardened linux-firmware ${MICROCODE}
 arch-chroot /mnt /bin/bash -e <<EOF
 # Select timezone and synchronize clock.
 ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 systemctl enable systemd-timesyncd.service &>/dev/null
 hwclock --systohc
-# Install CPU-specific microcode.
-pacman -S ${MICROCODE}
 # Install BIOS, UEFI and Secure Boot tools.
 pacman -S fwupd efibootmgr sbctl
 # Install Linux documentation tools.
@@ -190,7 +188,7 @@ $ROOTFS                /      ext4    defaults,ssd   0       0
 EOF
 
 # Configure mkinitcpio.
-sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g' /mnt/etc/mkinitcpio.conf
+sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt filesystems fsck),g' /mnt/etc/mkinitcpio.conf
 
 # Create Unified Kernel Image.
 # Also, add "quiet" later.
