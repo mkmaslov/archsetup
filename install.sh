@@ -115,7 +115,6 @@ arch-chroot /mnt /bin/bash -e <<EOF
 ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 systemctl enable systemd-timesyncd.service &>/dev/null
 hwclock --systohc
-timedatectl set-ntp true &>/dev/null
 # Install CPU-specific microcode.
 pacman -S ${MICROCODE}
 # Install BIOS, UEFI and Secure Boot tools.
@@ -123,16 +122,16 @@ pacman -S fwupd efibootmgr sbctl
 # Install Linux documentation tools.
 pacman -S man-db man-pages texinfo
 # Install CLI tools.
-pacman -S zsh neovim btop
+pacman -S zsh neovim btop git
 # Install fonts.
 pacman -S terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts
 # Install networking software.
-pacman -S networkmanager wpa_supplicant
+pacman -S networkmanager wpa_supplicant network-manager-applet
 systemctl enable NetworkManager &>/dev/null
 systemctl enable wpa_supplicant.service &>/dev/null
 systemctl enable systemd-resolved.service &>/dev/null
 # Install desktop environment.
-pacman -S gnome-console gdm gnome-control-center gnome-disk-utility gnome-shell-extensions gnome-tweaks
+pacman -S gnome-terminal gdm gnome-control-center gnome-disk-utility gnome-shell-extensions gnome-tweaks
 systemctl enable gdm.service &>/dev/null
 # Installing system utilities.
 pacman -S exfatprogs nautilus sushi gnome-disk-utility
