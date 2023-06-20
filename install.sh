@@ -126,10 +126,8 @@ arch-chroot /mnt /bin/bash -e <<EOF
   
   # Select timezone and synchronize the clock.
   ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
-  systemctl enable systemd-timesyncd.service &>/dev/null
   hwclock --systohc
-  timedatectl set-ntp true
-
+  
   pacman -S --noconfirm \
   
   # Install BIOS, UEFI and Secure Boot tools.
@@ -159,12 +157,6 @@ arch-chroot /mnt /bin/bash -e <<EOF
   # Applications that are rarely used and should be installed in a VM:
   # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
   
-  # Enable daemons.
-  systemctl enable NetworkManager &>/dev/null
-  systemctl enable wpa_supplicant.service &>/dev/null
-  systemctl enable systemd-resolved.service &>/dev/null
-  systemctl enable gdm.service &>/dev/null
-
   # Set up users.
   say "Choose a password for the root user."
   passwd
@@ -173,6 +165,13 @@ arch-chroot /mnt /bin/bash -e <<EOF
   say "Choose a password for ${USERNAME}."
   passwd ${USERNAME}
 EOF
+
+# Enable daemons.
+systemctl enable NetworkManager --root=/mnt &>/dev/null
+systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
+systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
+systemctl enable gdm.service --root=/mnt &>/dev/null
+systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
 
 # Set hostname.
 ask "Choose a hostname: " && HOSTNAME="${RESPONSE}"
