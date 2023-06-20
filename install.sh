@@ -120,42 +120,23 @@ mount $EFI /mnt/efi
 # Install packages to the / (root) partition.
 pacman -Sy
 say "Installing packages."
-# Instal base Arch Linux system with linux-hardened kernel.
-pacstrap -K /mnt base linux-hardened linux-firmware ${MICROCODE}
+# Instal base Arch Linux system and necessary packages.
+pacstrap -K /mnt base linux-hardened linux-firmware ${MICROCODE} fwupd \
+efibootmgr sbctl lvm2 man-db man-pages texinfo tmux zsh neovim btop git \
+terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts \
+networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher \
+gnome-terminal gdm gnome-control-center gnome-shell-extensions gnome-tweaks \
+exfatprogs nautilus sushi gnome-disk-utility calibre gimp inkscape vlc \
+guvcview signal-desktop telegram-desktop
+
+# Applications that are rarely used and should be installed in a VM:
+# easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
+  
 arch-chroot /mnt /bin/bash -e <<EOF
   
   # Select timezone and synchronize the clock.
   ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
   hwclock --systohc
-  
-  pacman -S --noconfirm \
-  
-  # Install BIOS, UEFI and Secure Boot tools.
-  fwupd efibootmgr sbctl lvm2\
-  
-  # Install Linux documentation tools.
-  man-db man-pages texinfo \
-  
-  # Install CLI tools.
-  tmux zsh neovim btop git \
-  
-  # Install fonts.
-  terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts \
-  
-  # Install networking software.
-  networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher\ 
-  
-  # Install desktop environment.
-  gnome-terminal gdm gnome-control-center gnome-shell-extensions gnome-tweaks \
-  
-  # Installing system utilities.
-  exfatprogs nautilus sushi gnome-disk-utility \
-  
-  # Install miscelaneous applications.
-  calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop
-  
-  # Applications that are rarely used and should be installed in a VM:
-  # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
   
   # Set up users.
   say "Choose a password for the root user."
