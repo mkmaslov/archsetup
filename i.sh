@@ -87,7 +87,7 @@ confirm "This script will delete all the data on $DISK. Do you agree"
 
 # Partition the target drive.
 wipefs -af "$DISK" &>/dev/null
-sgdisk -Zo "$DISK" -n 1:0:512M -t 1:ef00 -c 1:EFI \
+sgdisk "$DISK" -Zo -I -n 1:0:512M -t 1:ef00 -c 1:EFI \
   -n 2:0:0 -t 2:8e00 -c 2:LVM &>/dev/null
 
 # Notify kernel about filesystem changes and get partition labels.
