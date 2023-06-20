@@ -1,6 +1,8 @@
 #!/bin/bash
 # Install Arch Linux with full-disk encryption.
 
+# test
+
 # Highlight a message.
 YELLOW="\e[1;33m" && RED="\e[1;31m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
 function say () { echo -e "${YELLOW}$1${COLOR_OFF}";}
