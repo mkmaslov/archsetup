@@ -177,7 +177,7 @@ arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 # Set up users.
 say "Choose a password for the root user."
 arch-chroot /mnt passwd
-ask "Choose a username of a non-root user:" && username="${RESPONSE}"
+ask "Choose a username of a non-root user:" && USERNAME="${RESPONSE}"
 arch-chroot /mnt useradd -m ${USERNAME}
 say "Choose a password for ${USERNAME}."
 arch-chroot /mnt passwd ${USERNAME}
@@ -192,7 +192,7 @@ set ai
 set hlsearch
 set tabstop=4
 set shiftwidth=2
-set clipboard=unnamedplus
+set clipboard+=unnamedplus
 set colorcolumn=80
 highlight ColorColumn ctermbg=0 guibg=lightgrey
 EOF
@@ -247,7 +247,6 @@ EOF
 sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt sd-lvm2 filesystems fsck),g' /mnt/etc/mkinitcpio.conf
 
 # There is a problem vmlinuz not found
-
 
 # Create Unified Kernel Image.
 # Also, add "quiet" later.
