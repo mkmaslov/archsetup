@@ -120,32 +120,29 @@ mount $EFI /mnt/efi
 # Install packages to the / (root) partition.
 pacman -Sy
 say "Installing packages."
-# Instal base Arch Linux system and necessary packages.
-pacstrap -K /mnt base linux-hardened linux-firmware ${MICROCODE} fwupd \
-efibootmgr sbctl lvm2 man-db man-pages texinfo tmux zsh neovim btop git \
-terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts \
-networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher \
-gnome-terminal gdm gnome-control-center gnome-shell-extensions gnome-tweaks \
-exfatprogs nautilus sushi gnome-disk-utility calibre gimp inkscape vlc \
-guvcview signal-desktop telegram-desktop
-
+PKGS=""
+# Base Arch Linux system with linux-hardened kernel and Intel microcode.
+PKGS+="base linux-hardened linux-firmware ${MICROCODE} "
+# BIOS, UEFI and Secure Boot tools.
+PKGS+="fwupd efibootmgr sbctl "
+# CLI tools.
+PKGS+="tmux zsh neovim btop git man-db man-pages texinfo "
+# Fonts.
+PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
+# Networking tools.
+PKGS+="networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher"
+# GNOME desktop environment.
+PKGS+="gdm gnome-control-center gnome-shell-extensions "
+PKGS+="gnome-tweaks gnome-terminal wl-clipboard "
+# File(system) management tools.
+PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility "
+# Miscelaneous applications.
+PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
 # Applications that are rarely used and should be installed in a VM:
 # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
-  
-arch-chroot /mnt /bin/bash -e <<EOF
-  
-  # Select timezone and synchronize the clock.
-  ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
-  hwclock --systohc
-  
-  # Set up users.
-  say "Choose a password for the root user."
-  passwd
-  ask "Choose a username of a non-root user:" && username="${RESPONSE}"
-  useradd -m ${USERNAME}
-  say "Choose a password for ${USERNAME}."
-  passwd ${USERNAME}
-EOF
+# KVM GUI manager.
+PKGS+="gnome-boxes"
+pacstrap -K /mnt ${PKGS}
 
 # Enable daemons.
 systemctl enable NetworkManager --root=/mnt &>/dev/null
@@ -174,6 +171,17 @@ FONT=ter-132b
 EOF
 arch-chroot /mnt locale-gen &>/dev/null
 
+# Set up the timezone.
+arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+
+# Set up users.
+say "Choose a password for the root user."
+arch-chroot /mnt passwd
+ask "Choose a username of a non-root user:" && username="${RESPONSE}"
+arch-chroot /mnt useradd -m ${USERNAME}
+say "Choose a password for ${USERNAME}."
+arch-chroot /mnt passwd ${USERNAME}
+
 # Configure dotfiles.
 cat > /mnt/home/$USERNAME/.vimrc <<EOF
 syntax on
@@ -194,6 +202,32 @@ set runtimepath^=~/.vim runtimepath+=~/.vim/after
 let &packpath = $runtimepath
 source ~/.vimrc
 EOF
+cat > /mnt/home/$USERNAME/.zshrc <<EOF
+#!/bin/zsh
+
+autoload -U colors && colors
+autoload -U promptinit
+
+# Autocompletion
+zstyle ':autocomplete:*' groups always
+zstyle ':autocomplete:list-choices:*' max-lines 40%
+zstyle ':autocomplete:*' min-delay 0.05
+zstyle ':autocomplete:*' ignored-input '..##'
+zstyle ':completion:*' completer _complete _ignored _match _correct _approximate
+zstyle ':completion:*' menu select=50 search
+
+# Set command history settings
+HISTFILE=~/.zsh_history
+HISTSIZE=50000
+SAVEHIST=10000
+
+export PS1=$'%{\033[1m%}%{\033[38;2;0;0;0;48;2;166;189;219m%} %n [%T] %{\033[38;2;166;189;219;48;2;56;108;176m%}%{\033[38;2;215;215;215;48;2;56;108;176m%} %~ %{\033[0m%}%{\033[38;2;56;108;176m%} %{\033[0m%}'
+
+alias ls='ls --color=auto --group-directories-first'
+alias grep='grep --color=auto'
+alias vim=nvim
+unsetopt BEEP
+EOF
 
 # Configure disk mapping tables.
 # LVMUUID=$(blkid $LVM | cut -f2 -d'"')
@@ -211,6 +245,9 @@ EOF
 
 # Configure mkinitcpio.
 sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt sd-lvm2 filesystems fsck),g' /mnt/etc/mkinitcpio.conf
+
+# There is a problem vmlinuz not found
+
 
 # Create Unified Kernel Image.
 # Also, add "quiet" later.
