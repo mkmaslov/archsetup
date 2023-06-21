@@ -196,6 +196,7 @@ set clipboard+=unnamedplus
 set colorcolumn=80
 highlight ColorColumn ctermbg=0 guibg=lightgrey
 EOF
+mkdir /mnt/home/$USERNAME/.config
 mkdir /mnt/home/$USERNAME/.config/nvim
 cat > /mnt/home/$USERNAME/.config/nvim/init.vim <<EOF
 set runtimepath^=~/.vim runtimepath+=~/.vim/after
@@ -244,9 +245,7 @@ ${SWAP}            none   swap    defaults       0       0
 EOF
 
 # Configure mkinitcpio.
-sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt sd-lvm2 filesystems fsck),g' /mnt/etc/mkinitcpio.conf
-
-# There is a problem vmlinuz not found
+sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g' /mnt/etc/mkinitcpio.conf
 
 # Create Unified Kernel Image.
 # Also, add "quiet" later.
@@ -254,7 +253,7 @@ echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > /mnt/etc/kernel/
 echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > /mnt/etc/kernel/cmdline_fallback
 cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
 ALL_config="/etc/mkinitcpio.conf"
-ALL_kver="/boot/vmlinuz-linux"
+ALL_kver="/boot/vmlinuz-linux-hardened"
 ALL_microcode=(/boot/*-ucode.img)
 PRESETS=('default' 'fallback')
 default_uki="/efi/EFI/Linux/arch.efi"
