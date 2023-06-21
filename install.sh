@@ -258,21 +258,25 @@ ALL_microcode=(/boot/*-ucode.img)
 PRESETS=('default' 'fallback')
 default_uki="/efi/EFI/Linux/arch.efi"
 fallback_options="-S autodetect --cmdline /etc/kernel/cmdline_fallback"
-fallback_uki="/efi/EFI/Linux/arch-fallback.efi"
+fallback_uki="/efi/EFI/Linux/arch-fb.efi"
 EOF
 mkdir /mnt/efi/EFI && mkdir /mnt/efi/EFI/Linux
 arch-chroot /mnt mkinitcpio -P
 rm /mnt/efi/initramfs-*.img &>/dev/null
 rm /mnt/boot/initramfs-*.img &>/dev/null
 
-# Configuring Secure Boot.
+# Configure Secure Boot.
 say "Configuring Secure Boot."
 arch-chroot /mnt /bin/bash -e <<EOF
   sbctl create-keys
   sbctl enroll-keys
   sbctl sign --save /efi/EFI/Linux/arch.efi
-  sbctl sign --save /efi/EFI/Linux/arch-fallback.efi
+  sbctl sign --save /efi/EFI/Linux/arch-fb.efi
 EOF
+
+# Add UEFI boot entries.
+efibootmgr --create --disk ${DISK} --part 1 --label "arch" --loader "EFI\\Linux\\arch.efi"
+efibootmgr --create --disk ${DISK} --part 1 --label "arch-fb" --loader "EFI\\Linux\\arch-fb.efi"
 
 # Finishing installation.
 success "Installation completed successfully!"
