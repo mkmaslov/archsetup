@@ -130,7 +130,7 @@ PKGS+="tmux zsh neovim btop git man-db man-pages texinfo "
 # Fonts.
 PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
 # Networking tools.
-PKGS+="networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher"
+PKGS+="networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher "
 # GNOME desktop environment.
 PKGS+="gdm gnome-control-center gnome-shell-extensions "
 PKGS+="gnome-tweaks gnome-terminal wl-clipboard "
