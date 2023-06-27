@@ -120,36 +120,37 @@ mount $EFI /mnt/efi
 # Install packages to the / (root) partition.
 pacman -Sy
 say "Installing packages."
-PKGS=""
+#PKGS=""
+PKGS="base linux-hardened linux-firmware ${MICROCODE} efibootmgr sbctl fwupd neovim zsh terminus-font lvm2 man-db man-pages"
 # Base Arch Linux system with linux-hardened kernel and Intel microcode.
-PKGS+="base linux-hardened linux-firmware ${MICROCODE} "
+#PKGS+="base linux-hardened linux-firmware ${MICROCODE} "
 # BIOS, UEFI and Secure Boot tools.
-PKGS+="fwupd efibootmgr sbctl "
+#PKGS+="fwupd efibootmgr sbctl "
 # CLI tools.
-PKGS+="tmux zsh neovim btop git man-db man-pages texinfo "
+#PKGS+="tmux zsh neovim btop git man-db man-pages texinfo "
 # Fonts.
-PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
+#PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
 # Networking tools.
-PKGS+="networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher "
+#PKGS+="networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher "
 # GNOME desktop environment.
-PKGS+="gdm gnome-control-center gnome-shell-extensions "
-PKGS+="gnome-tweaks gnome-terminal wl-clipboard "
+#PKGS+="gdm gnome-control-center gnome-shell-extensions "
+#PKGS+="gnome-tweaks gnome-terminal wl-clipboard "
 # File(system) management tools.
-PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility "
+#PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility "
 # Miscelaneous applications.
-PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
+#PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
 # Applications that are rarely used and should be installed in a VM:
 # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
 # KVM GUI manager.
-PKGS+="gnome-boxes"
+#PKGS+="gnome-boxes"
 pacstrap -K /mnt ${PKGS}
 
 # Enable daemons.
-systemctl enable NetworkManager --root=/mnt &>/dev/null
-systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
-systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
-systemctl enable gdm.service --root=/mnt &>/dev/null
-systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
+#systemctl enable NetworkManager --root=/mnt &>/dev/null
+#systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
+#systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
+#systemctl enable gdm.service --root=/mnt &>/dev/null
+#systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
 
 # Set hostname.
 ask "Choose a hostname: " && HOSTNAME="${RESPONSE}"
@@ -183,7 +184,8 @@ say "Choose a password for ${USERNAME}."
 arch-chroot /mnt passwd ${USERNAME}
 
 # Configure dotfiles.
-cat > /mnt/home/$USERNAME/.vimrc <<EOF
+HOMEDIR="/mnt/home/${USERNAME}"
+cat > ${HOMEDIR}/.vimrc <<EOF
 syntax on
 set number
 set ruler
@@ -195,15 +197,21 @@ set shiftwidth=2
 set clipboard+=unnamedplus
 set colorcolumn=80
 highlight ColorColumn ctermbg=0 guibg=lightgrey
+call plug#begin()
+Plug 'scrooloose/nerdtree'
+call plug#end()
 EOF
-mkdir /mnt/home/$USERNAME/.config
-mkdir /mnt/home/$USERNAME/.config/nvim
-cat > /mnt/home/$USERNAME/.config/nvim/init.vim <<EOF
+mkdir ${HOMEDIR}/.config
+mkdir ${HOMEDIR}/.config/nvim
+cat > ${HOMEDIR}/.config/nvim/init.vim <<EOF
 set runtimepath^=~/.vim runtimepath+=~/.vim/after
 let &packpath = $runtimepath
 source ~/.vimrc
 EOF
-cat > /mnt/home/$USERNAME/.zshrc <<EOF
+curl -fLo ${HOMEDIR}/.local/share/nvim/site/autoload/plug.vim --create-dirs \
+  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+nvim +'PlugInstall --sync' +qa
+cat > ${HOMEDIR}/.zshrc <<EOF
 #!/bin/zsh
 
 autoload -U colors && colors
