@@ -121,9 +121,9 @@ mount $EFI /mnt/efi
 pacman -Sy
 say "Installing packages."
 #PKGS=""
-PKGS="base linux-hardened linux-firmware sof-firmware ${MICROCODE} efibootmgr sbctl fwupd neovim zsh terminus-font lvm2 man-db man-pages"
+PKGS="base linux linux-firmware sof-firmware ${MICROCODE} efibootmgr sbctl fwupd neovim zsh terminus-font lvm2 man-db man-pages"
 # Base Arch Linux system with linux-hardened kernel and Intel microcode.
-#PKGS+="base linux-hardened linux-firmware ${MICROCODE} "
+#PKGS+="base base-devel linux linux-firmware sof-firmware ${MICROCODE} "
 # BIOS, UEFI and Secure Boot tools.
 #PKGS+="fwupd efibootmgr sbctl "
 # CLI tools.
@@ -182,6 +182,12 @@ ask "Choose a username of a non-root user:" && USERNAME="${RESPONSE}"
 arch-chroot /mnt useradd -m ${USERNAME}
 say "Choose a password for ${USERNAME}."
 arch-chroot /mnt passwd ${USERNAME}
+#cat > /mnt/etc/gdm/custom.conf <<EOF
+#[daemon]
+#WaylandEnable=True
+#AutomaticLoginEnable=True
+#AutomaticLogin=${USERNAME}
+#EOF
 
 # Configure disk mapping tables.
 # LVMUUID=$(blkid $LVM | cut -f2 -d'"')

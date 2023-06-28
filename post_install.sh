@@ -7,6 +7,7 @@
 # --  configures nvim text editor
 # --  sets up an isolated python environment with Jupyter Notebook 
 
+set -e
 RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
 
 # Configure zsh shell.
@@ -16,6 +17,15 @@ mkdir ${HOME}/.zsh_plugins
 curl "${RES}/.zshrc" > "${HOME}/.zshrc"
 source ${HOME}/.zshrc
 
+# Install yay AUR helper.
+mkdir temp && cd temp
+git clone https://aur.archlinux.org/yay.git
+cd yay && makepkg -si && cd .. && cd .. && rm -rf temp
+
+# Install software from AUR.
+archupdate
+yay -S numix-icon-theme-git numix-square-icon-theme forticlient-vpn\
+  protonvpn-cli zoom skypeforlinux-stable-bin seafile-client
 
 # Configure nvim text editor.
 curl "${RES}/.vimrc" > "${HOME}/.vimrc"
