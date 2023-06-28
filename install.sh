@@ -181,8 +181,10 @@ say "Choose a password for the root user."
 arch-chroot /mnt passwd
 ask "Choose a username of a non-root user:" && USERNAME="${RESPONSE}"
 arch-chroot /mnt useradd -m ${USERNAME}
+arch-chroot /mnt usermod -aG wheel ${USERNAME}
 say "Choose a password for ${USERNAME}."
 arch-chroot /mnt passwd ${USERNAME}
+sed -i 's/# \(%wheel ALL=(ALL\(:ALL\|\)) ALL\)/\1/g' /mnt/etc/sudoers
 #cat > /mnt/etc/gdm/custom.conf <<EOF
 #[daemon]
 #WaylandEnable=True
@@ -213,7 +215,7 @@ echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > /mnt/etc/kernel/
 echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > /mnt/etc/kernel/cmdline_fallback
 cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
 ALL_config="/etc/mkinitcpio.conf"
-ALL_kver="/boot/vmlinuz-linux-hardened"
+ALL_kver="/boot/vmlinuz-linux"
 ALL_microcode=(/boot/*-ucode.img)
 PRESETS=('default' 'fallback')
 default_uki="/efi/EFI/Linux/arch.efi"
