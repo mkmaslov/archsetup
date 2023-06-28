@@ -127,7 +127,7 @@ PKGS=""
 # Base Arch Linux system.
 PKGS+="base base-devel linux "
 # Drivers.
-PKGS+="linux-firmware sof-firmware alsa-firmware {MICROCODE} "
+PKGS+="linux-firmware sof-firmware alsa-firmware ${MICROCODE} "
 # BIOS, UEFI and Secure Boot tools.
 PKGS+="fwupd efibootmgr sbctl "
 # CLI tools.
