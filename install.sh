@@ -66,6 +66,7 @@ fi
 say "Checking Secure Boot status. Should return: disabled (setup)."
 bootctl --quiet status | grep "Secure Boot:"
 confirm "Is Secure Boot disabled"
+# Delete all keys, restore factory keys, reset to Setup Mode.
 
 # Check system clock synchronization.
 say "Checking time synchronization."
