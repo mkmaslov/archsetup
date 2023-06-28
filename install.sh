@@ -138,7 +138,7 @@ PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
 PKGS+="networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher "
 # GNOME desktop environment.
 PKGS+="gdm gnome-control-center gnome-shell-extensions "
-PKGS+="gnome-tweaks gnome-terminal wl-clipboard "
+PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring"
 # File(system) management tools.
 PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility "
 # Miscelaneous applications.
