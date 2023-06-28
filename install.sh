@@ -85,6 +85,7 @@ fi
 lsblk -ado PATH,SIZE
 ask "Choose the target drive for installation: /dev/" && DISK="/dev/${RESPONSE}"
 confirm "This script will delete all the data on ${DISK}. Do you agree"
+clear
 
 # Partition the target drive.
 wipefs -af ${DISK} &>/dev/null
@@ -117,6 +118,7 @@ mkswap ${SWAP} && swapon ${SWAP}
 mount ${ROOT} /mnt
 mkdir /mnt/efi
 mount $EFI /mnt/efi
+clear
 
 # Install packages to the / (root) partition.
 pacman -Sy
@@ -163,6 +165,7 @@ cat > /mnt/etc/hosts <<EOF
 ::1         localhost
 127.0.1.1   $HOSTNAME.localdomain   $HOSTNAME
 EOF
+clear
 
 # Set up locale.
 echo "en_IE.UTF-8 UTF-8"  > /mnt/etc/locale.gen
@@ -191,6 +194,7 @@ sed -i 's/# \(%wheel ALL=(ALL\(:ALL\|\)) ALL\)/\1/g' /mnt/etc/sudoers
 #AutomaticLoginEnable=True
 #AutomaticLogin=${USERNAME}
 #EOF
+clear
 
 # Configure disk mapping tables.
 # LVMUUID=$(blkid $LVM | cut -f2 -d'"')
@@ -226,11 +230,13 @@ mkdir /mnt/efi/EFI && mkdir /mnt/efi/EFI/Linux
 arch-chroot /mnt mkinitcpio -P
 rm /mnt/efi/initramfs-*.img &>/dev/null
 rm /mnt/boot/initramfs-*.img &>/dev/null
+clear
 
 # Configure Secure Boot.
 say "Configuring Secure Boot."
 arch-chroot /mnt /bin/bash -e <<EOF
   sbctl create-keys
+  chattr -i /sys/firmware/efi/efivars/{PK,KEK,db}*
   sbctl enroll-keys
   sbctl sign --save /efi/EFI/Linux/arch.efi
   sbctl sign --save /efi/EFI/Linux/arch-fb.efi
