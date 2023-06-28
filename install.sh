@@ -183,61 +183,6 @@ arch-chroot /mnt useradd -m ${USERNAME}
 say "Choose a password for ${USERNAME}."
 arch-chroot /mnt passwd ${USERNAME}
 
-# Configure dotfiles.
-HOMEDIR="/mnt/home/${USERNAME}"
-cat > ${HOMEDIR}/.vimrc <<EOF
-syntax on
-set number
-set ruler
-set expandtab
-set ai
-set hlsearch
-set tabstop=4
-set shiftwidth=2
-set clipboard+=unnamedplus
-set colorcolumn=80
-highlight ColorColumn ctermbg=0 guibg=lightgrey
-call plug#begin()
-Plug 'scrooloose/nerdtree'
-call plug#end()
-EOF
-mkdir ${HOMEDIR}/.config
-mkdir ${HOMEDIR}/.config/nvim
-cat > ${HOMEDIR}/.config/nvim/init.vim <<EOF
-set runtimepath^=~/.vim runtimepath+=~/.vim/after
-let &packpath = $runtimepath
-source ~/.vimrc
-EOF
-curl -fLo ${HOMEDIR}/.local/share/nvim/site/autoload/plug.vim --create-dirs \
-  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-nvim +'PlugInstall --sync' +qa
-cat > ${HOMEDIR}/.zshrc <<EOF
-#!/bin/zsh
-
-autoload -U colors && colors
-autoload -U promptinit
-
-# Autocompletion
-zstyle ':autocomplete:*' groups always
-zstyle ':autocomplete:list-choices:*' max-lines 40%
-zstyle ':autocomplete:*' min-delay 0.05
-zstyle ':autocomplete:*' ignored-input '..##'
-zstyle ':completion:*' completer _complete _ignored _match _correct _approximate
-zstyle ':completion:*' menu select=50 search
-
-# Set command history settings
-HISTFILE=~/.zsh_history
-HISTSIZE=50000
-SAVEHIST=10000
-
-export PS1=$'%{\033[1m%}%{\033[38;2;0;0;0;48;2;166;189;219m%} %n [%T] %{\033[38;2;166;189;219;48;2;56;108;176m%}%{\033[38;2;215;215;215;48;2;56;108;176m%} %~ %{\033[0m%}%{\033[38;2;56;108;176m%} %{\033[0m%}'
-
-alias ls='ls --color=auto --group-directories-first'
-alias grep='grep --color=auto'
-alias vim=nvim
-unsetopt BEEP
-EOF
-
 # Configure disk mapping tables.
 # LVMUUID=$(blkid $LVM | cut -f2 -d'"')
 # UUID=...
