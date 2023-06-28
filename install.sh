@@ -123,37 +123,39 @@ clear
 # Install packages to the / (root) partition.
 pacman -Sy
 say "Installing packages."
-#PKGS=""
-PKGS="base linux linux-firmware sof-firmware ${MICROCODE} efibootmgr sbctl fwupd neovim zsh terminus-font lvm2 man-db man-pages"
-# Base Arch Linux system with linux-hardened kernel and Intel microcode.
-#PKGS+="base base-devel linux linux-firmware sof-firmware ${MICROCODE} "
+PKGS=""
+# Base Arch Linux system.
+PKGS+="base base-devel linux "
+# Drivers.
+PKGS+="linux-firmware sof-firmware alsa-firmware {MICROCODE} "
 # BIOS, UEFI and Secure Boot tools.
-#PKGS+="fwupd efibootmgr sbctl "
+PKGS+="fwupd efibootmgr sbctl "
 # CLI tools.
-#PKGS+="tmux zsh neovim btop git man-db man-pages texinfo "
+PKGS+="tmux zsh neovim btop git man-db man-pages texinfo "
 # Fonts.
-#PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
+PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
 # Networking tools.
-#PKGS+="networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher "
+PKGS+="networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher "
 # GNOME desktop environment.
-#PKGS+="gdm gnome-control-center gnome-shell-extensions "
-#PKGS+="gnome-tweaks gnome-terminal wl-clipboard "
+PKGS+="gdm gnome-control-center gnome-shell-extensions "
+PKGS+="gnome-tweaks gnome-terminal wl-clipboard "
 # File(system) management tools.
-#PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility "
+PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility "
 # Miscelaneous applications.
-#PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
+PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
 # Applications that are rarely used and should be installed in a VM:
 # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
 # KVM GUI manager.
-#PKGS+="gnome-boxes"
+PKGS+="gnome-boxes"
 pacstrap -K /mnt ${PKGS}
 
 # Enable daemons.
-#systemctl enable NetworkManager --root=/mnt &>/dev/null
-#systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
-#systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
-#systemctl enable gdm.service --root=/mnt &>/dev/null
-#systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
+systemctl enable bluetooth --root=/mnt &>/dev/null
+systemctl enable NetworkManager --root=/mnt &>/dev/null
+systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
+systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
+systemctl enable gdm.service --root=/mnt &>/dev/null
+systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
 
 # Set hostname.
 ask "Choose a hostname: " && HOSTNAME="${RESPONSE}"
@@ -188,17 +190,15 @@ arch-chroot /mnt usermod -aG wheel ${USERNAME}
 say "Choose a password for ${USERNAME}."
 arch-chroot /mnt passwd ${USERNAME}
 sed -i 's/# \(%wheel ALL=(ALL\(:ALL\|\)) ALL\)/\1/g' /mnt/etc/sudoers
-#cat > /mnt/etc/gdm/custom.conf <<EOF
-#[daemon]
-#WaylandEnable=True
-#AutomaticLoginEnable=True
-#AutomaticLogin=${USERNAME}
-#EOF
+cat > /mnt/etc/gdm/custom.conf <<EOF
+[daemon]
+WaylandEnable=True
+AutomaticLoginEnable=True
+AutomaticLogin=${USERNAME}
+EOF
 clear
 
 # Configure disk mapping tables.
-# LVMUUID=$(blkid $LVM | cut -f2 -d'"')
-# UUID=...
 echo "lvm $LVM - luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
 no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
 cat > /mnt/etc/fstab <<EOF
