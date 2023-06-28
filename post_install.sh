@@ -10,7 +10,12 @@
 RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
 
 # Configure zsh shell.
+mkdir ${HOME}/.zsh_plugins
+(cd ${HOME}/.zsh_plugins; git clone --depth 1 --\
+  https://github.com/marlonrichert/zsh-autocomplete.git)
 curl "${RES}/.zshrc" > "${HOME}/.zshrc"
+source ${HOME}/.zshrc
+
 
 # Configure nvim text editor.
 curl "${RES}/.vimrc" > "${HOME}/.vimrc"
@@ -35,5 +40,3 @@ ${PIP} install numpy scipy sympy matplotlib notebook\
   --require-virtualenv
 ${JUPYTER} contrib nbextension install --sys-prefix
 ${JUPYTER} nbextensions_configurator enable --sys-prefix
-
-# To-do: set up environmental variables in this script.
