@@ -121,7 +121,7 @@ mount $EFI /mnt/efi
 pacman -Sy
 say "Installing packages."
 #PKGS=""
-PKGS="base linux-hardened linux-firmware ${MICROCODE} efibootmgr sbctl fwupd neovim zsh terminus-font lvm2 man-db man-pages"
+PKGS="base linux-hardened linux-firmware sof-firmware ${MICROCODE} efibootmgr sbctl fwupd neovim zsh terminus-font lvm2 man-db man-pages"
 # Base Arch Linux system with linux-hardened kernel and Intel microcode.
 #PKGS+="base linux-hardened linux-firmware ${MICROCODE} "
 # BIOS, UEFI and Secure Boot tools.
@@ -192,9 +192,9 @@ cat > /mnt/etc/fstab <<EOF
 # Static information about the filesystems.
 # See fstab(5) for details.
 # <file system>  <dir>  <type>  <options>      <dump>  <pass>
-${EFI}             /efi   vfat    defaults,ssd   0       0
-${ROOT}            /      ext4    defaults,ssd   0       0
-${SWAP}            none   swap    defaults       0       0
+${EFI}             /efi   vfat    defaults     0       0
+${ROOT}            /      ext4    defaults     0       0
+${SWAP}            none   swap    defaults     0       0
 EOF
 
 # Configure mkinitcpio.
