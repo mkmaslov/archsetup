@@ -1,13 +1,18 @@
 #!/bin/bash
 
-# This script performs a basic Arch Linux installation.
+set -e
+
+# This script performs basic Arch Linux installation.
 # The installation includes:
 # --  LUKS encryption of / (root) and swap partitions using dm-crypt
-# --  linux-hardened kernel
-# --  basic CLI features: tmux, zsh, neovim, btop
-#     (with reasonable default dotfiles)
-# --  basic networking: networkmanager, firefox, torbrowser
-# --  Desktop environment: GNOME (only DM and shell)
+# --  standard "linux" kernel
+#     ["linux-hardened" lacks hibernation and reduces overall performance]
+# --  CLI tools: tmux, zsh, neovim, btop
+#     [including minimal dotfiles that enable essential functionality]
+# --  Networking: networkmanager, firefox, torbrowser
+# --  Desktop environment: GNOME [only DM and shell]
+# --  Security tools: 
+#     usbguard, apparmor [MAC], firejail [sandboxing], firewalld
 
 # Highlight the output.
 YELLOW="\e[1;33m" && RED="\e[1;31m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
@@ -25,11 +30,19 @@ confirm() {
     if [[ !(${RESPONSE} =~ ^(yes|y|Y|YES|Yes)$) ]]; then
         say "Cancelling installation." && exit
     fi
+    clear
 }
 
 # Reset terminal window.
 loadkeys us && setfont ter-132b && clear
 say "** ARCH LINUX INSTALLATION **"
+
+# Check that Secure Boot is disabled.
+say "Full Secure Boot reset is recommended before using this script. In BIOS:"
+say "delete all SB keys, restore factory SB keys, then reset SB to Setup Mode."
+say "Verifying Secure Boot status. Should return: disabled (setup)."
+bootctl --quiet status | grep "Secure Boot:"
+confirm "Is Secure Boot disabled and all the keys are reset to default"
 
 # Test Internet connection.
 status "Testing Internet connection: "
@@ -37,12 +50,12 @@ ping -w 5 archlinux.org &>/dev/null
 NREACHED=${?}
 if [ ${NREACHED} -ne 0 ]; then
     error "failed."
-    echo -ne "Before proceeding with the installation, "
-    echo -e "please make sure you have a functional Internet connection."
-    echo -ne "To connect to a WiFi network, please use: "
-    echo -e "iwctl station wlan0 connect <ESSID>."
-    echo -ne "To test your Internet connection, please use: "
-    echo -e "ping archlinux.org."
+    status "Before proceeding with the installation, "
+    say    "please make sure you have a functional Internet connection."
+    say    "To connect to a WiFi network, use: "
+    say    " >> iwctl station wlan0 connect <ESSID>."
+    say    "To manually test the Internet connection, use: "
+    say    " >> ping archlinux.org."
     exit
 else
   success "success."
@@ -54,19 +67,13 @@ status "Checking UEFI boot mode: "
 COUNT=$(ls /sys/firmware/efi/efivars | grep -c '.')
 if [ ${COUNT} -eq 0 ]; then
   error "failed."
-  echo -ne "Before proceeding with installation, "
-  echo -ne "please make sure your system is booted in UEFI mode. "
-  echo -e "This setting can be changed in BIOS."
+  status "Before proceeding with the installation, "
+  status "please make sure the system is booted in UEFI mode. "
+  say    "This setting can be configured in BIOS."
   exit
 else
   success "success."
 fi
-
-# Check that Secure Boot is disabled.
-say "Checking Secure Boot status. Should return: disabled (setup)."
-bootctl --quiet status | grep "Secure Boot:"
-confirm "Is Secure Boot disabled"
-# Delete all keys, restore factory keys, reset to Setup Mode.
 
 # Check system clock synchronization.
 say "Checking time synchronization."
@@ -85,7 +92,6 @@ fi
 lsblk -ado PATH,SIZE
 ask "Choose the target drive for installation: /dev/" && DISK="/dev/${RESPONSE}"
 confirm "This script will delete all the data on ${DISK}. Do you agree"
-clear
 
 # Partition the target drive.
 wipefs -af ${DISK} &>/dev/null
@@ -98,10 +104,11 @@ EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
 
 # Set up LUKS encryption for the LVM partition.
+clear
 say "Setting up full-disk encryption. You will be prompted for a password."
 modprobe dm-crypt
 cryptsetup luksFormat --cipher=aes-xts-plain64 \
-  --key-size=512 --verify-passphrase --verbose ${LVM}
+  --key-size=512 --verify-passphrase ${LVM}
 say "Mounting the encrypted drive. You will be prompted for the password."
 cryptsetup open --type luks ${LVM} lvm
 
@@ -135,16 +142,17 @@ PKGS+="tmux zsh neovim btop git man-db man-pages texinfo "
 # Fonts.
 PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
 # Networking tools.
-PKGS+="networkmanager wpa_supplicant network-manager-applet firefox torbrowser-launcher "
+PKGS+="networkmanager wpa_supplicant network-manager-applet firefox "
+PKGS+="torbrowser-launcher "
 # GNOME desktop environment.
 PKGS+="gdm gnome-control-center gnome-shell-extensions "
 PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring"
 # File(system) management tools.
-PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility "
+PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility usbguard"
 # Miscelaneous applications.
-PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
 # Applications that are rarely used and should be installed in a VM:
 # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
+PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
 # KVM GUI manager.
 PKGS+="gnome-boxes"
 pacstrap -K /mnt ${PKGS}
@@ -156,13 +164,13 @@ systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
 systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
 systemctl enable gdm.service --root=/mnt &>/dev/null
 systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
+systemctl enable usbguard-dbus.service --root=/mnt &>/dev/null
+systemctl mask geoclue.service --root=/mnt &>/dev/null
 
 # Set hostname.
 ask "Choose a hostname: " && HOSTNAME="${RESPONSE}"
 echo "${HOSTNAME}" > /mnt/etc/hostname
-cat > /mnt/etc/hosts <<EOF
-# Static table lookup for hostnames.
-# See hosts(5) for details.
+cat >> /mnt/etc/hosts <<EOF
 127.0.0.1   localhost
 ::1         localhost
 127.0.1.1   $HOSTNAME.localdomain   $HOSTNAME
@@ -184,7 +192,7 @@ arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 # Set up users.
 say "Choose a password for the root user."
 arch-chroot /mnt passwd
-ask "Choose a username of a non-root user:" && USERNAME="${RESPONSE}"
+ask "Choose a username of a non-root user: " && USERNAME="${RESPONSE}"
 arch-chroot /mnt useradd -m ${USERNAME}
 arch-chroot /mnt usermod -aG wheel ${USERNAME}
 say "Choose a password for ${USERNAME}."
@@ -198,13 +206,16 @@ AutomaticLogin=${USERNAME}
 EOF
 clear
 
+# Set up environment variables.
+cat >> /mnt/etc/environment <<EOF
+EDITOR=nvim
+MOZ_ENABLE_WAYLAND=1
+EOF
+
 # Configure disk mapping tables.
 echo "lvm $LVM - luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
 no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
-cat > /mnt/etc/fstab <<EOF
-# Static information about the filesystems.
-# See fstab(5) for details.
-# <file system>  <dir>  <type>  <options>      <dump>  <pass>
+cat >> /mnt/etc/fstab <<EOF
 ${EFI}             /efi   vfat    defaults     0       0
 ${ROOT}            /      ext4    defaults     0       0
 ${SWAP}            none   swap    defaults     0       0
@@ -243,13 +254,17 @@ arch-chroot /mnt /bin/bash -e <<EOF
 EOF
 
 # Add UEFI boot entries.
-efibootmgr --create --disk ${DISK} --part 1 --label "arch" --loader "EFI\\Linux\\arch.efi"
-efibootmgr --create --disk ${DISK} --part 1 --label "arch-fb" --loader "EFI\\Linux\\arch-fb.efi"
+efibootmgr --create --disk ${DISK} --part 1 \
+  --label "Arch Linux" --loader "EFI\\Linux\\arch.efi"
+efibootmgr --create --disk ${DISK} --part 1 \
+  --label "Arch Linux (fallback)" --loader "EFI\\Linux\\arch-fb.efi"
 
 # Finishing installation.
-success "Installation completed successfully!"
-say "The computer will now reboot to BIOS."
-say "Please, enable Secure Boot there and restart."
-umount -R /mnt
-say "DEBUG -> COMPLETED"
-#systemctl reboot --firmware-setup
+success "** Installation completed successfully! **"
+say "Please set up the desired boot order using:"
+say " >> efibootmgr --bootorder XXXX,YYYY,..."
+say "To remove unused boot entries, use:"
+say " >> efibootmgr -b XXXX --delete-bootnum"
+say "After finishing UEFI configuration, reboot into BIOS using:"
+say " >> systemctl reboot --firmware-setup"
+say "Inside the BIOS, enable Secure Boot and Boot Order Lock (if present)."
