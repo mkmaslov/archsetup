@@ -89,6 +89,7 @@ else
 fi
 
 # Choose a target drive.
+say "List of all attached storage devices:"
 lsblk -ado PATH,SIZE
 ask "Choose the target drive for installation: /dev/" && DISK="/dev/${RESPONSE}"
 confirm "This script will delete all the data on ${DISK}. Do you agree"
@@ -146,9 +147,9 @@ PKGS+="networkmanager wpa_supplicant network-manager-applet firefox "
 PKGS+="torbrowser-launcher "
 # GNOME desktop environment.
 PKGS+="gdm gnome-control-center gnome-shell-extensions "
-PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring"
+PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring "
 # File(system) management tools.
-PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility usbguard"
+PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility usbguard "
 # Miscelaneous applications.
 # Applications that are rarely used and should be installed in a VM:
 # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
