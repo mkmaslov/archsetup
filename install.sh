@@ -240,8 +240,8 @@ fallback_uki="/efi/EFI/Linux/arch-fb.efi"
 EOF
 mkdir /mnt/efi/EFI && mkdir /mnt/efi/EFI/Linux
 arch-chroot /mnt mkinitcpio -P
-rm /mnt/efi/initramfs-*.img &>/dev/null
-rm /mnt/boot/initramfs-*.img &>/dev/null
+rm /mnt/efi/initramfs-*.img &>/dev/null || true
+rm /mnt/boot/initramfs-*.img &>/dev/null || true
 clear
 
 # Configure Secure Boot.
