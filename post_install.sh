@@ -10,6 +10,10 @@
 set -e
 RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
 
+# Configure USB Guard.
+gsettings set org.gnome.desktop.privacy usb-protection true
+gsettings set org.gnome.desktop.privacy usb-protection-level always
+
 # Configure zsh shell.
 mkdir ${HOME}/.zsh_plugins
 (cd ${HOME}/.zsh_plugins; git clone --depth 1 --\

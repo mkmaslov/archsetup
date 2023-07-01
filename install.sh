@@ -213,6 +213,28 @@ EDITOR=nvim
 MOZ_ENABLE_WAYLAND=1
 EOF
 
+# Configure USB Guard.
+arch-chroot /mnt /bin/bash -e <<EOF
+  usbguard generate-policy > /home/rules.conf
+  mv /home/rules.conf /etc/usbguard/rules.conf
+EOF
+cat >> /mnt/etc/polkit-1/rules.d/70-allow-usbguard.rules <<EOF
+// Allow users in wheel group to communicate with USBGuard
+polkit.addRule(function(action, subject) {
+if ((action.id == "org.usbguard.Policy1.listRules" ||
+action.id == "org.usbguard.Policy1.appendRule" ||
+action.id == "org.usbguard.Policy1.removeRule" ||
+action.id == "org.usbguard.Devices1.applyDevicePolicy" ||
+action.id == "org.usbguard.Devices1.listDevices" ||
+action.id == "org.usbguard1.getParameter" ||
+action.id == "org.usbguard1.setParameter") &&
+subject.active == true && subject.local == true &&
+subject.isInGroup("wheel")) {
+return polkit.Result.YES;
+}
+});
+EOF
+
 # Configure disk mapping tables.
 echo "lvm $LVM - luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
 no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
