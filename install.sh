@@ -249,7 +249,7 @@ say "Configuring Secure Boot."
 arch-chroot /mnt /bin/bash -e <<EOF
   sbctl create-keys
   chattr -i /sys/firmware/efi/efivars/{PK,KEK,db}* || true
-  sbctl enroll-keys
+  sbctl enroll-keys --microsoft
   sbctl sign --save /efi/EFI/Linux/arch.efi
   sbctl sign --save /efi/EFI/Linux/arch-fb.efi
 EOF
