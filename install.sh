@@ -217,6 +217,7 @@ EOF
 arch-chroot /mnt /bin/bash -e <<EOF
   usbguard generate-policy > /home/rules.conf
   mv /home/rules.conf /etc/usbguard/rules.conf
+  chmod 600 /etc/usbguard/rules.conf
 EOF
 cat >> /mnt/etc/polkit-1/rules.d/70-allow-usbguard.rules <<EOF
 // Allow users in wheel group to communicate with USBGuard

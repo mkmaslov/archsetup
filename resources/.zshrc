@@ -21,6 +21,8 @@ export JUPYTER_RUNTIME_DIR="${HOME}/.python_venv/share/jupyter/runtime"
 alias ls='ls -A --color=auto --group-directories-first'
 alias grep='grep --color=auto'
 alias archupdate='yay -Syu --answerclean All --answerdiff None'
+alias jupyter="${HOME}/.python_venv/bin/jupyter"
+alias venvpip="${HOME}/.python_venv/bin/pip --require-virtualenv"
 
 # Turn off all beeps
 unsetopt BEEP
