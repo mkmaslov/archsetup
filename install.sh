@@ -139,7 +139,7 @@ PKGS+="linux-firmware sof-firmware alsa-firmware ${MICROCODE} "
 # BIOS, UEFI and Secure Boot tools.
 PKGS+="fwupd efibootmgr sbctl "
 # CLI tools.
-PKGS+="tmux zsh neovim btop git man-db man-pages texinfo "
+PKGS+="tmux zsh neovim btop git go man-db man-pages texinfo "
 # Fonts.
 PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
 # Networking tools.

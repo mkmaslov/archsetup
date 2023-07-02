@@ -14,12 +14,20 @@ RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
 gsettings set org.gnome.desktop.privacy usb-protection true
 gsettings set org.gnome.desktop.privacy usb-protection-level always
 
-# Configure zsh shell.
+# Configure zsh shell (user).
+chsh -s /bin/zsh
 mkdir ${HOME}/.zsh_plugins
 (cd ${HOME}/.zsh_plugins; git clone --depth 1 --\
   https://github.com/marlonrichert/zsh-autocomplete.git)
-curl "${RES}/.zshrc" > "${HOME}/.zshrc"
+curl "${RES}/user.zshrc" > "${HOME}/.zshrc"
 source ${HOME}/.zshrc
+
+# Configure zsh shell (root).
+su -c "chsh -s /bin/zsh"
+sudo mkdir /root/.zsh_plugins
+(sudo cd /root/.zsh_plugins; sudo git clone --depth 1 --\
+  https://github.com/marlonrichert/zsh-autocomplete.git)
+sudo curl "${RES}/root.zshrc" > "/root/.zshrc"
 
 # Install yay AUR helper.
 mkdir temp && cd temp
@@ -28,7 +36,7 @@ cd yay && makepkg -si --noconfirm && cd .. && cd .. && rm -rf temp
 
 # Install software from AUR.
 archupdate
-yay -S --answerclean All --answerdiff None\
+yay -S --answerclean All --answerdiff None --removemake\
   numix-icon-theme-git numix-square-icon-theme forticlient-vpn\
   protonvpn-cli zoom skypeforlinux-stable-bin seafile-client
 
@@ -41,7 +49,7 @@ curl -fLo ${HOME}/.local/share/nvim/site/autoload/plug.vim --create-dirs \
 nvim +'PlugInstall --sync' +qa
 
 # Setting up virtual environment for Python
-PYDIR="${HOME}/.python_venv/"
+PYDIR="${HOME}/.python_venv"
 PIP="${PYDIR}/bin/pip"
 JUPYTER="${PYDIR}/bin/jupyter"
 mkdir ${PYDIR} && mkdir ${PYDIR}/cache
@@ -49,9 +57,12 @@ cat > ${PYDIR}/pip.conf <<EOF
 [global]
 cache-dir=${PYDIR}/cache
 EOF
+python -m venv ${PYDIR}
 ${PIP} install --upgrade pip --require-virtualenv
 ${PIP} install numpy scipy sympy matplotlib notebook\
   jupyter_contrib_nbextensions jupyter_nbextensions_configurator\
   --require-virtualenv
 ${JUPYTER} contrib nbextension install --sys-prefix
 ${JUPYTER} nbextensions_configurator enable --sys-prefix
+curl "${RES}/custom.css" > "${PYDIR}/etc/jupyter/custom.css"
+curl "${RES}/notebook.json" > "${PYDIR}/etc/jupyter/nbconfig/notebook.json"
