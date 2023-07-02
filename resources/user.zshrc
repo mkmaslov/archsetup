@@ -17,6 +17,7 @@ export MOZ_ENABLE_WAYLAND=1
 export JUPYTER_CONFIG_DIR="${HOME}/.python_venv/etc/jupyter"
 export JUPYTER_DATA_DIR="${HOME}/.python_venv/share/jupyter"
 export JUPYTER_RUNTIME_DIR="${HOME}/.python_venv/share/jupyter/runtime"
+export IPYTHONDIR="${HOME}/.python_venv/etc/ipython"
 
 alias ls='ls -A --color=auto --group-directories-first'
 alias grep='grep --color=auto'

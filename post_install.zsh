@@ -38,8 +38,9 @@ cd yay && makepkg -si --noconfirm && cd .. && cd .. && rm -rf temp
 # Install software from AUR.
 archupdate
 yay -S --answerclean All --answerdiff None --removemake\
-  numix-icon-theme-git numix-square-icon-theme forticlient-vpn\
-  protonvpn-cli zoom skypeforlinux-stable-bin seafile-client
+  numix-icon-theme-git numix-square-icon-theme forticlient-vpn \
+  protonvpn-cli zoom skypeforlinux-stable-bin seafile-client \
+  gnome-browser-connector
 
 # Configure nvim text editor.
 curl "${RES}/.vimrc" > "${HOME}/.vimrc"
