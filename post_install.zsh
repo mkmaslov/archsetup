@@ -25,9 +25,10 @@ source ${HOME}/.zshrc
 # Configure zsh shell (root).
 su -c "chsh -s /bin/zsh"
 sudo mkdir /root/.zsh_plugins
-(sudo cd /root/.zsh_plugins; sudo git clone --depth 1 --\
-  https://github.com/marlonrichert/zsh-autocomplete.git)
-sudo curl "${RES}/root.zshrc" > "/root/.zshrc"
+su -c "(cd /root/.zsh_plugins; git clone --depth 1 --\
+  https://github.com/marlonrichert/zsh-autocomplete.git)"
+curl "${RES}/root.zshrc" > ".temp_zshrc"
+sudo mv ".temp_zshrc" "/root/.zshrc"
 
 # Install yay AUR helper.
 mkdir temp && cd temp
