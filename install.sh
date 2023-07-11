@@ -147,9 +147,9 @@ PKGS+="networkmanager wpa_supplicant network-manager-applet firefox "
 PKGS+="torbrowser-launcher "
 # GNOME desktop environment.
 PKGS+="gdm gnome-control-center gnome-shell-extensions gnome-themes-extra "
-PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring "
+PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring eog "
 # File(system) management tools.
-PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility usbguard "
+PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility usbguard gvfs-mtp "
 # Miscelaneous applications.
 # Applications that are rarely used and should be installed in a VM:
 # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.

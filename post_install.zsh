@@ -50,6 +50,8 @@ curl -fLo ${HOME}/.local/share/nvim/site/autoload/plug.vim --create-dirs \
   https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 nvim +'PlugInstall --sync' +qa
 
+# To-do: write same nvim config for root.
+
 # Setting up virtual environment for Python
 PYDIR="${HOME}/.python_venv"
 PIP="${PYDIR}/bin/pip"
@@ -66,5 +68,8 @@ ${PIP} install numpy scipy sympy matplotlib notebook\
   --require-virtualenv
 ${JUPYTER} contrib nbextension install --sys-prefix
 ${JUPYTER} nbextensions_configurator enable --sys-prefix
-curl "${RES}/custom.css" > "${PYDIR}/etc/jupyter/custom.css"
+mkdir "${PYDIR}/etc/jupyter/custom"
+curl "${RES}/custom.css" > "${PYDIR}/etc/jupyter/custom/custom.css"
 curl "${RES}/notebook.json" > "${PYDIR}/etc/jupyter/nbconfig/notebook.json"
+
+# To-do: write TeX Live installation.
