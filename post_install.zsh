@@ -10,10 +10,6 @@
 set -e
 RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
 
-# Configure USB Guard.
-gsettings set org.gnome.desktop.privacy usb-protection true
-gsettings set org.gnome.desktop.privacy usb-protection-level always
-
 # Configure zsh shell (user).
 chsh -s /bin/zsh
 mkdir ${HOME}/.zsh_plugins
@@ -50,8 +46,6 @@ curl -fLo ${HOME}/.local/share/nvim/site/autoload/plug.vim --create-dirs \
   https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 nvim +'PlugInstall --sync' +qa
 
-# To-do: write same nvim config for root.
-
 # Setting up virtual environment for Python
 PYDIR="${HOME}/.python_venv"
 PIP="${PYDIR}/bin/pip"
@@ -71,5 +65,3 @@ ${JUPYTER} nbextensions_configurator enable --sys-prefix
 mkdir "${PYDIR}/etc/jupyter/custom"
 curl "${RES}/custom.css" > "${PYDIR}/etc/jupyter/custom/custom.css"
 curl "${RES}/notebook.json" > "${PYDIR}/etc/jupyter/nbconfig/notebook.json"
-
-# To-do: write TeX Live installation.
