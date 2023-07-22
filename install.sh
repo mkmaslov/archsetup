@@ -154,6 +154,7 @@ PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility usbguard gvfs-mtp "
 # Applications that are rarely used and should be installed in a VM:
 # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
 PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
+PKGS+="transmission-gtk "
 # KVM GUI manager.
 PKGS+="gnome-boxes"
 pacstrap -K /mnt ${PKGS}
