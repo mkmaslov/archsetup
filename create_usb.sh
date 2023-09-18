@@ -17,6 +17,9 @@ say "Downloading latest .iso and its GPG signature."
 wget -q --show-progress \
   http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso.sig \
   http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso
+# curl --progress-bar \
+#  -O http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso.sig \
+#  -O http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso
 say "Verifying image signature."
 gpg --keyserver-options auto-key-retrieve --verify *.iso.sig *.iso
 say "Output above should contain \"Good signature from ...\". \
@@ -30,6 +33,7 @@ if [[ $response =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   if [[ $response =~ ^(yes|y|Y|YES|Yes)$ ]]; then
     # Return "true", if umount throws "not mounted" error
     umount -q $disk?* || /bin/true && sudo wipefs --all $disk
+    say "Writing the image. Do not remove the drive."
     sudo dd bs=4M if=archlinux-x86_64.iso of=$disk \
       conv=fsync oflag=direct status=progress
     sudo sync && sudo eject $disk
