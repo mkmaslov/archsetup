@@ -52,6 +52,7 @@ if [[ $response =~ ^(yes|y|Y|YES|Yes)$ ]]; then
     umount -q $disk?* || /bin/true && sudo wipefs --all $disk
     # Write image into USB disk.
     say "Writing the image. Do not remove the drive."
+    say "[Note that writing to disks requires superuser access.]"
     sudo dd bs=4M if=archlinux-x86_64.iso of=$disk \
       conv=fsync oflag=direct status=progress
     # Check that all data is transferred and remove the drive.
