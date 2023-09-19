@@ -14,12 +14,21 @@ function ask () {
 say "Creating Arch Linux installation medium."
 mkdir arch_temp && cd arch_temp
 say "Downloading latest .iso and its GPG signature."
-wget -q --show-progress \
-  http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso.sig \
-  http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso
-# curl --progress-bar \
-#  -O http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso.sig \
-#  -O http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso
+if ! [ -x "$(command -v wget)" ]; then
+  if ! [ -x "$(command -v curl)" ]; then
+    say "Please install either wget or curl to be able to proceed."
+    exit
+  else
+    curl --progress-bar -O \
+      http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso.sig \
+      -O http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso
+  fi
+  wget -q --show-progress \
+    http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso.sig \
+    http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso
+fi
+
+
 say "Verifying image signature."
 gpg --keyserver-options auto-key-retrieve --verify *.iso.sig *.iso
 say "Output above should contain \"Good signature from ...\". \
