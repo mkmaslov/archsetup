@@ -28,6 +28,7 @@ if ! [ -x "$(command -v wget)" ]; then
       -O http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso.sig \
       -O http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso
   fi
+else
   wget -q --show-progress \
     http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso.sig \
     http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso
