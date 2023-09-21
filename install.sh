@@ -148,6 +148,7 @@ PKGS+="torbrowser-launcher "
 # GNOME desktop environment.
 PKGS+="gdm gnome-control-center gnome-shell-extensions gnome-themes-extra "
 PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring eog "
+PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
 # File(system) management tools.
 PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility usbguard gvfs-mtp "
 # Miscelaneous applications.
