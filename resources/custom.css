@@ -1,9 +1,15 @@
-.prompt_container{
-    display: none !important
+/* Notebook content takes full page width */
+.container {
+    width: 99% !important;
+} 
+.output_result {
+	max-width:100% !important;
 }
-.container{
-    width:100% !important
+.prompt {
+	display:none !important;
 }
-.prompt{
-    display: none !important
+
+/* Prevent highlight box from getting clipped */
+div.cell.selected {
+    border-left-width: 1px !important;
 }
