@@ -65,3 +65,6 @@ ${JUPYTER} nbextensions_configurator enable --sys-prefix
 mkdir "${PYDIR}/etc/jupyter/custom"
 curl "${RES}/custom.css" > "${PYDIR}/etc/jupyter/custom/custom.css"
 curl "${RES}/notebook.json" > "${PYDIR}/etc/jupyter/nbconfig/notebook.json"
+
+# Configure git to use keyring
+git config --global credential.helper libsecret
