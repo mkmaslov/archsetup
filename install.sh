@@ -11,8 +11,8 @@ set -e
 #     [including minimal dotfiles that enable essential functionality]
 # --  Networking: networkmanager, firefox, torbrowser
 # --  Desktop environment: GNOME [only DM and shell]
-# --  Security tools: 
-#     usbguard, apparmor [MAC], firejail [sandboxing], firewalld
+# --  Security tools (not implemented yet): 
+#     apparmor [MAC], firejail [sandboxing], firewalld
 
 # Highlight the output.
 YELLOW="\e[1;33m" && RED="\e[1;31m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
@@ -150,7 +150,7 @@ PKGS+="gdm gnome-control-center gnome-shell-extensions gnome-themes-extra "
 PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring eog "
 PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
 # File(system) management tools.
-PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility usbguard gvfs-mtp "
+PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility gvfs-mtp "
 # Miscelaneous applications.
 # Applications that are rarely used and should be installed in a VM:
 # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
@@ -167,7 +167,6 @@ systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
 systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
 systemctl enable gdm.service --root=/mnt &>/dev/null
 systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
-systemctl enable usbguard-dbus.service --root=/mnt &>/dev/null
 systemctl mask geoclue.service --root=/mnt &>/dev/null
 
 # Set hostname.
@@ -209,18 +208,8 @@ AutomaticLogin=${USERNAME}
 EOF
 clear
 
-# Set up environment variables.
-cat >> /mnt/etc/environment <<EOF
-EDITOR=nvim
-MOZ_ENABLE_WAYLAND=1
-EOF
-
-# Configure USB Guard.
-arch-chroot /mnt /bin/bash -e <<EOF
-  usbguard generate-policy > /home/rules.conf
-  mv /home/rules.conf /etc/usbguard/rules.conf
-  chmod 600 /etc/usbguard/rules.conf
-EOF
+# Set up nvim as default editor globally.
+echo "EDITOR=nvim" >> /mnt/etc/environment
 
 # Configure disk mapping tables.
 echo "lvm $LVM - luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\

@@ -1,32 +1,29 @@
 # Arch Linux installation guide and shell scripts
 
-This document provides detailed instructions for Arch Linux installation on x86-64 machine. The accompanying repository contains shell scripts (bash and zsh) that implement these instructions.
+This document provides detailed instructions for Arch Linux installation on x86-64 machine. The accompanying repository contains shell scripts (bash and zsh) that implement these instructions. The instructions were tested on several Lenovo Thinkpad laptops, [which provide great hardware support for Linux](https://www.lenovo.com/linux).
 
-The instructions were tested on several Lenovo Thinkpad laptops, [which typically provide great hardware support for Linux](https://www.lenovo.com/linux).
+*References*: [guide](https://wiki.archlinux.org/title/User:Bai-Chiang/Installation_notes#Reboot_into_BIOS) by [Bai-Chiang](https://github.com/Bai-Chiang) and [guide](https://www.coded-with-love.com/blog/install-arch-linux-encrypted/) by [Florian Brinker](https://github.com/fbrinker).
 
-*References:* [guide](https://wiki.archlinux.org/title/User:Bai-Chiang/Installation_notes#Reboot_into_BIOS) by [Bai-Chiang](https://github.com/Bai-Chiang) and [guide](https://www.coded-with-love.com/blog/install-arch-linux-encrypted/) by [Florian Brinker](https://github.com/fbrinker).
-
-
-
-**DISCLAIMER:** Author does not take responsibility for the issues you may encounter when following this guide. You could provide feedback [here](https://github.com/mkmaslov/archlsetup/issues).
+*Disclaimer*: herewith author renounces the responsibility for any issues one may encounter following this guide. [Leave feedback here](https://github.com/mkmaslov/archlsetup/issues).
 
 ---
-#### Contents
-* [Create installation medium](#create-installation-medium)
-* [Check Secure Boot mode and UEFI mode](#check-secure-boot-mode-and-uefi-mode)
-* [Activate network connection](#activate-network-connection)
-* [Partition disks and configure full-disk encryption](#partition-disks-and-configure-full-disk-encryption)
+### Contents
+* [Creating installation medium](#creating-installation-medium)
+* [Verifying Secure Boot mode and UEFI mode](#verifying-secure-boot-mode-and-uefi-mode)
+* [Activating network connection](#activating-network-connection)
+* [Setting up time synchronization](#setting-up-time-synchronization)
+* [Partitioning disks and configuring full-disk encryption](#partitioning-disks-and-configuring-full-disk-encryption)
 * [Install packages and change root](#install-packages-and-change-root)
 * [Configure the system](#configure-the-system)
 * [Configure disk mapping](#configure-disk-mapping)
-* [Create Unified Kernel Image](#create-unified-kernel-image)
+* [Creating Unified Kernel Image](#creating-unified-kernel-image)
 * [Configure Secure Boot](#configure-secure-boot)
 * [Add UEFI boot entries](#add-uefi-boot-entries)
 * [Reboot into BIOS and enable Secure Boot](#reboot-into-bios-and-enable-secure-boot)
 * [Recommended software](#recommended-software)
 
 
-## Create installation medium
+## Creating installation medium
 
 *References*: [official Arch Linux installation guide](https://wiki.archlinux.org/title/Installation_guide) and [USB drive creation](https://wiki.archlinux.org/title/USB_flash_installation_medium).
 
@@ -54,27 +51,29 @@ sudo dd bs=4M if=archlinux-x86_64.iso of=/dev/sdX conv=fsync oflag=direct status
 sudo sync
 ```
 
-The aforementioned instructions are also available in the form of [**a shell script**](https://github.com/mkmaslov/archlinux_setup_guide/blob/main/create_USB.sh).
-
 To wipe the storage device after Arch Linux installation, the ISO 9660 filesystem signature needs to be removed:
 ```
 sudo wipefs --all /dev/sdX
 ```
 
-## Check Secure Boot mode and UEFI mode
+## Verifying Secure Boot mode and UEFI mode
 
-Enter BIOS (`Fn+F2` key combination on Lenovo laptops), navigate to the `Security` section, restore Factory Keys (PK,KEK,db and dbx), reset Secure Boot to `Setup Mode` and disable Secure Boot. Boot into Live ISO (`Fn+F12` key combination on Lenovo laptops), select keyboard layout and font (use `ter-132b` for HiDPI displays):
-```
-loadkeys us && setfont ter-132b
-```
-Then, verify Secure Boot status:
+**Enter BIOS**: during system boot activate certain key combination (e.g., `Fn+F2` on Lenovo laptops):
+- navigate to the **Security** section
+- **restore Factory Keys** (`PK,KEK,db and dbx`)
+- set Secure Boot to **Setup Mode**
+- **disable** Secure Boot
+
+**Boot into installation medium**: during system boot activate certain key combination (e.g., `Fn+F12` on Lenovo laptops). 
+
+When booted, choose US keyboard layout using `loadkeys us`. On HiDPI displays, one can use `setfont ter-132b` to make text more readable. Verify Secure Boot status:
 ```console
 $ bootctl status | grep "Secure Boot"
 ...
 Secure Boot: disabled (setup)
 ...
 ```
-Verify current boot options:
+Verify current [UEFI](https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface) boot options:
 ```console
 $ efibootmgr
 BootCurrent: 0004
@@ -87,40 +86,36 @@ Boot0002* Hard Drive(Device:80)/HD(Part1,Sig00112233)
 Boot0003* PXE Boot: MAC(00D0B7C15D91)
 Boot0004* Linux
 ```
-and remove unused options if necessary:
+If necessary, remove the excessive options:
 ```
 efibootmgr -b 0004 -B
 ```
 
-Verify that the system is booted in UEFI mode. Output of:
+Verify that the system is booted in UEFI mode. The following command should produce a non-empty output:
 ```
 ls /sys/firmware/efi/efivars
 ```
-should be non-empty.
 
-## Activate network connection
+## Activating network connection
 
-Either connect via network cable or connect using `iwctl`:
+Connect to Internet using a network cable or set up a Wi-Fi connection using [iwd](https://wiki.archlinux.org/title/Iwd):
 ```
-iwctl
-device list
-station wlan0 connect <YOUR-SSID>
+iwctl station wlan0 connect <YOUR-SSID>
 dhcpcd wlan0
-ping archlinux.org
 ```
+By default at boot, Arch Linux image assigns the name `wlan0` to the Wi-Fi card. If this isn't the case for some reason, one can list all Wi-Fi devices using `iwctl device list`. Also, one can scan for reachable Wi-Fi networks using `iwctl station <DEVICE-NAME> scan`.
+
+To verify if the connection to Internet is functioning, use `ping archlinux.org`.
 
 ## Setting up time synchronization
 
-The very first thing that needs to be set up after the network is functioning is [time synchronization](https://wiki.archlinux.org/title/Systemd-timesyncd)[^C1]. 
-
-Automatic time-synchronization via `systemd-timesyncd.service` can be enabled by running:
+Automatic time synchronization is **vital** for the functional OS[^C1]. One can enable it using [systemd-timesyncd](https://wiki.archlinux.org/title/Systemd-timesyncd) daemon:
 ```
 systemctl enable systemd-timesyncd.service
 timedatectl set-ntp true
 ```
-The configuration file containing addresses of time servers is stored in `/etc/systemd/timesyncd.conf`.
 
-If set up correctly, one should see:
+If set up correctly, one should obtain the following status message:
 ```console
 $ timedatectl status
 Local time: Thu 2015-07-09 18:21:33 CEST
@@ -131,7 +126,7 @@ System clock synchronized: yes
               NTP service: active
           RTC in local TZ: no
 ```
-For the information about current time server that may be relevant for debugging:
+If debugging is needed, one can request the information about current time server:
 ```console
 $ timedatectl timesync-status
        Server: 103.47.76.177 (0.arch.pool.ntp.org)
@@ -148,90 +143,29 @@ Root distance: 231.856ms (max: 5s)
  Packet count: 2
     Frequency: +267.747ppm
 ```
+The configuration file containing addresses of time servers is stored in `/etc/systemd/timesyncd.conf`.
 
-## Partition disks and configure full-disk encryption
+## Partitioning disks and configuring full-disk encryption
 
-Use `gdisk` to create GPT partition table with two partitions -- EFI-type boot partition and LVM-type root partition:
-```console
-$ lsblk
-NAME            MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINTS 
-sdX      8:16   1 119.5G  0 disk
-$ gdisk /dev/sdX
-GPT fdisk (gdisk) version 1.0.9.1
+Use [gdisk](https://wiki.archlinux.org/title/GPT_fdisk) to create GPT partition table with two [partitions](https://wiki.archlinux.org/title/Partitioning): 
+- `512 MiB` EFI-type partition for storing [Unified Kernel Image](#creating-unified-kernel-image)
+- LVM-type partition for storing filesystem root and swap partitions
 
-Partition table scan:
-  MBR: protective
-  BSD: not present
-  APM: not present
-  GPT: present
-
-Found valid GPT with protective MBR; using GPT.
-
-Command (? for help): o
-This option deletes all partitions and creates a new protective MBR.
-Proceed? (Y/N): Y
-
-Command (? for help): n
-Partition number (1-128, default 1): 
-First sector (34-62668766, default = 2048) or {+-}size{KMGTP}: 
-Last sector (2048-62668766, default = 62666751) or {+-}size{KMGTP}: +512M
-Current type is 8300 (Linux filesystem)
-Hex code or GUID (L to show codes, Enter = 8300): ef00
-Changed type of partition to 'EFI system partition'
-
-Command (? for help): n
-Partition number (2-128, default 2): 
-First sector (34-62668766, default = 1050624) or {+-}size{KMGTP}: 
-Last sector (1050624-62668766, default = 62666751) or {+-}size{KMGTP}: -18G
-Current type is 8300 (Linux filesystem)
-Hex code or GUID (L to show codes, Enter = 8300):
-Changed type of partition to 'Linux filesystem'
-
-Command (? for help): n
-Partition number (3-128, default 3): 
-First sector (34-62668766, default = 24920064) or {+-}size{KMGTP}: 
-Last sector (24920064-62668766, default = 62666751) or {+-}size{KMGTP}: 
-Current type is 8300 (Linux filesystem)
-Hex code or GUID (L to show codes, Enter = 8300): 8200
-Changed type of partition to 'Linux swap'
-
-Command (? for help): p
-Disk /dev/sdX: 62668800 sectors, 29.9 GiB
-Model: Flash Drive     
-Sector size (logical/physical): 512/512 bytes
-Disk identifier (GUID): B021BC12-F035-4191-A7AA-02E8C2085556
-Partition table holds up to 128 entries
-Main partition table begins at sector 2 and ends at sector 33
-First usable sector is 34, last usable sector is 62668766
-Partitions will be aligned on 2048-sector boundaries
-Total free space is 4062 sectors (2.0 MiB)
-
-Number  Start (sector)    End (sector)  Size       Code  Name
-   1            2048         1050623   512.0 MiB   EF00  EFI system partition
-   2         1050624        24920030   11.4 GiB    8300  Linux filesystem
-   3        24920064        62666751   18.0 GiB    8200  Linux swap
-
-Command (? for help): w
-
-Final checks complete. About to write GPT data. THIS WILL OVERWRITE EXISTING
-PARTITIONS!!
-
-Do you want to proceed? (Y/N): Y
-OK; writing new GUID partition table (GPT) to /dev/sdX.
-Warning: The kernel is still using the old partition table.
-The new table will be used at the next reboot or after you
-run partprobe(8) or kpartx(8)
-The operation has completed successfully.
+Execute:
 ```
-Load `dm-crypt` kernel module and benchmark encryption algorithms:
+sgdisk /dev/sdX -Zo -I -n 1:0:512M -t 1:ef00 -c 1:EFI -n 2:0:0 -t 2:8e00 -c 2:LVM
+```
+
+
+Load [dm-crypt](https://wiki.archlinux.org/title/Dm-crypt/Device_encryption) kernel module and benchmark available encryption algorithms:
 ```
 modprobe dm-crypt && cryptsetup benchmark
 ```
-Usually, `aes-xts-plain64` will be the fastest method (on hardware that supports AES accelaration). Set `4096 bytes` as sector size (if using NVMe), `512 byte` key length and encrypt the second partition:
+On hardware that supports AES acceleration, `aes-xts-plain64` will be the fastest method. Create `luks2` container with `512 byte` key length:
 ```
-cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 --sector-size 4096 --verify-passphrase --verbose /dev/sdX2
+cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 --verify-passphrase /dev/sdX2
 ```
-Now, open the partition:
+Open the encrypted partition:
 ```
 cryptsetup open /dev/sdX2 cryptroot
 ```
@@ -341,7 +275,7 @@ $ nano /etc/fstab
    /dev/mapper/cryptswap  none   swap    defaults       0   0
 ```
 
-## Create Unified Kernel Image
+## Creating Unified Kernel Image
 
 Create `/etc/kernel/cmdline` and `/etc/kernel/cmdline_fallback`:
 ```console
@@ -425,6 +359,10 @@ systemctl reboot --firmware-setup
 ```
 
 ## Recommended software
+
+- [firefox](https://archlinux.org/packages/extra/x86_64/firefox/) -- FOSS non-Chromium based browser. The default settings are not security/privacy-friendly. One needs to set up the following:
+   * go through settings, opt out of telemetry, set permissions
+   * install BitWarden and uBlock Origin extensions
 
 - **Mozilla Firefox**
   * set up privacy-friendly settings

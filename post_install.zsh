@@ -4,8 +4,10 @@
 # It should be run on an already booted fresh Arch Linux installation.
 # This script:
 # --  configures zsh shell
+# --  installs yay helper for AUR, installs software from AUR
 # --  configures nvim text editor
 # --  sets up an isolated python environment with Jupyter Notebook 
+# --  performs minimal TexLive installation
 
 set -e
 RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
@@ -33,18 +35,20 @@ cd yay && makepkg -si --noconfirm && cd .. && cd .. && rm -rf temp
 
 # Install software from AUR.
 archupdate
-yay -S --answerclean All --answerdiff None --removemake\
+yes | yay -S --answerclean All --answerdiff None --removemake\
   numix-icon-theme-git numix-square-icon-theme forticlient-vpn \
   protonvpn-cli zoom skypeforlinux-stable-bin seafile-client \
   gnome-browser-connector
 
-# Configure nvim text editor.
-curl "${RES}/.vimrc" > "${HOME}/.vimrc"
+# Configure nvim text editor (user and root).
+curl "${RES}/.vimrc" > ".temp_vimrc"
+cp ".temp_vimrc" "${HOME}/.vimrc"
+sudo mv ".temp_vimrc" "/root/.vimrc"
+curl "${RES}/init.vim" > "temp_init.vim"
 mkdir -p ${HOME}/.config/nvim
-curl "${RES}/init.vim" > "${HOME}/.config/nvim/init.vim" 
-curl -fLo ${HOME}/.local/share/nvim/site/autoload/plug.vim --create-dirs \
-  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-nvim +'PlugInstall --sync' +qa
+cp "temp_init.vim" "${HOME}/.config/nvim/init.vim"
+sudo mkdir -p /root/.config/nvim
+sudo mv "temp_init.vim" "/root/.config/nvim/init.vim"
 
 # Setting up virtual environment for Python
 PYDIR="${HOME}/.python_venv"
@@ -68,3 +72,18 @@ curl "${RES}/notebook.json" > "${PYDIR}/etc/jupyter/nbconfig/notebook.json"
 
 # Configure git to use keyring
 git config --global credential.helper libsecret
+
+# Minimal TeXLive installation
+TEMPDIR="${HOME}/.tex_install_temp"
+mkdir ${TEMPDIR} && cd ${TEMPDIR}
+curl -LO https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
+tar -xvzf install-tl-unx.tar.gz
+rm install-tl-unx.tar.gz
+cd install-tl-*
+curl "${RES}/texlive.profile" > "texlive.profile"
+perl install-tl -profile texlive.profile
+tlmgr update --all
+tlmgr install revtex physics bm graphics\
+  latex-bin geometry amsmath underscore dvipng
+# fix-cm type1cm latex tools
+cd .. && rm -rf ${TEMPDIR}

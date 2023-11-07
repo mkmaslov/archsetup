@@ -9,6 +9,3 @@ set shiftwidth=2
 set clipboard+=unnamedplus
 set colorcolumn=80
 highlight ColorColumn ctermbg=0 guibg=lightgrey
-call plug#begin()
-Plug 'preservim/nerdtree'
-call plug#end()

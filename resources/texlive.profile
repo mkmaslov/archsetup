@@ -1,0 +1,9 @@
+selected_scheme scheme-minimal
+binary_x86_64-linux 1
+TEXDIR ~/.texlive/
+TEXMFCONFIG ~/.texlive/texmf-config
+TEXMFSYSCONFIG ~/.texlive/texmf-config
+TEXMFLOCAL ~/.texlive/texmf-local
+TEXMFHOME ~/.texlive/texmf-local
+TEXMFVAR ~/.texlive/texmf-var
+TEXMFSYSVAR ~/.texlive/texmf-var
