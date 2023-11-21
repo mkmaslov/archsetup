@@ -156,8 +156,8 @@ PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility gvfs-mtp "
 # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
 PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
 PKGS+="transmission-gtk "
-# KVM GUI manager.
-PKGS+="gnome-boxes"
+# Virtualization software
+PKGS+="qemu-base libvirt virt-manager iptables-nft dnsmasq"
 pacstrap -K /mnt ${PKGS}
 
 # Enable daemons.

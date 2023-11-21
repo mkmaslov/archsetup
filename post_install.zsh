@@ -61,7 +61,7 @@ cache-dir=${PYDIR}/cache
 EOF
 python -m venv ${PYDIR}
 ${PIP} install --upgrade pip --require-virtualenv
-${PIP} install numpy scipy sympy matplotlib notebook\
+${PIP} install h5py numpy scipy sympy matplotlib notebook\
   jupyter_contrib_nbextensions jupyter_nbextensions_configurator\
   --require-virtualenv
 ${JUPYTER} contrib nbextension install --sys-prefix
