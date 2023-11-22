@@ -2,6 +2,8 @@
 
 set -e
 
+# test
+
 # This script performs basic Arch Linux installation.
 # The installation includes:
 # --  LUKS encryption of / (root) and swap partitions using dm-crypt
