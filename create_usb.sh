@@ -10,7 +10,7 @@ function say () { echo -e "${color_on}$1${color_off}";}
 
 # Function to prompt for a response.
 function ask () { 
-  echo -en "${color_on}$1" && read response && echo -en "${color_off}"
+  echo -en "${color_on}$1${color_off}$2" && read response
 }
 
 # Create temporary directory to store files.
@@ -45,14 +45,14 @@ ask "Do you want to proceed [y/N]? "
 if [[ $response =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   # Scan hardware for storage devices.
   lsblk -ado PATH,SIZE
-  ask "Choose the drive: /dev/" && disk="/dev/$response"
+  ask "Choose the drive:" " /dev/" && disk="/dev/$response"
   ask "This will delete all the data on $disk. Do you agree [y/N]? "
   if [[ $response =~ ^(yes|y|Y|YES|Yes)$ ]]; then
-    # Return 'true', if umount throws 'not mounted' error.
-    umount -q $disk?* || /bin/true && sudo wipefs --all $disk
-    # Write image into USB disk.
+    # Return "true", if umount throws "not mounted" error.
     say "Writing the image. Do not remove the drive."
     say "[Note that writing to disks requires superuser access.]"
+    umount -q $disk?* || /bin/true && sudo wipefs --all $disk
+    # Write image into USB disk.
     sudo dd bs=4M if=archlinux-x86_64.iso of=$disk \
       conv=fsync oflag=direct status=progress
     # Check that all data is transferred and remove the drive.
