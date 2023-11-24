@@ -13,9 +13,11 @@ function ask () {
   echo -en "${color_on}$1${color_off}$2" && read response
 }
 
-# Create temporary directory to store files.
+# Create cache directory.
 say "Creating Arch Linux installation medium."
-mkdir arch_temp && cd arch_temp
+# Clear cache if exists.
+rm -rf archinstall_cache &> /dev/null
+mkdir archinstall_cache && cd archinstall_cache
 
 # Download image and its GPG signature.
 say "Downloading the latest Arch Linux image and its GPG signature."
@@ -66,5 +68,5 @@ else
 fi
 
 # Remove temporary directory.
-cd .. && rm -rf arch_temp
+cd .. && rm -rf archinstall_cache
 exit
