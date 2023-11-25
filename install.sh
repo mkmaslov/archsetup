@@ -100,18 +100,18 @@ fi
 # Choose a target drive.
 msg "List of all attached storage devices:"
 lsblk -ado PATH,SIZE
-ask "Choose the target drive for installation: /dev/" && DISK="/dev/${RESPONSE}"
+ask "Choose target drive for installation:" "/dev/" && DISK="/dev/${RESPONSE}"
 confirm_action "This script will delete all the data on ${DISK}. Do you agree"
 
 # Partition the target drive.
 wipefs -af ${DISK} &>/dev/null
 if [ "$WINDOWS" -eq 0 ]; then
-  sgdisk ${DISK} -Zo -I -n 1:0:512M -t 1:ef00 -c 1:EFI \
-    -n 2:0:0 -t 2:8e00 -c 2:LVM &>/dev/null
-else
   ask "Enter size of Linux partition in GiB:"
   sgdisk ${DISK} -Zo -I -n 1:0:512M -t 1:ef00 -c 1:EFI \
     -n 2:0:+${RESPONSE}G -t 2:8e00 -c 2:LVM &>/dev/null
+else
+  sgdisk ${DISK} -Zo -I -n 1:0:512M -t 1:ef00 -c 1:EFI \
+    -n 2:0:0 -t 2:8e00 -c 2:LVM &>/dev/null
 fi
 confirm
 
