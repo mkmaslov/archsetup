@@ -1,29 +1,30 @@
 #!/bin/bash
-#
-# This script creates bootable USB drive using the latest Arch Linux image.
-# 
+
 set -e
 
-# Function to highlight a message.
-color_on="\e[1;33m" && color_off="\e[0m"
-function say () { echo -e "${color_on}$1${color_off}";}
+# This script creates bootable USB drive using the latest Arch Linux image.
 
-# Function to prompt for a response.
-function ask () { 
-  echo -en "${color_on}$1${color_off}$2" && read response
-}
+# Highlight the output.
+YELLOW="\e[1;33m" && COLOR_OFF="\e[0m"
+cprint() { echo -ne "${YELLOW}${1}${COLOR_OFF}"; }
+msg() { cprint "${1}\n"; }
+
+# Prompt for a response.
+ask () { cprint "${1} " && echo -ne "$2" && read RESPONSE; }
+
+
 
 # Create cache directory.
-say "Creating Arch Linux installation medium."
+msg "Creating Arch Linux installation medium."
 # Clear cache if exists.
 rm -rf archinstall_cache &> /dev/null
 mkdir archinstall_cache && cd archinstall_cache
 
 # Download image and its GPG signature.
-say "Downloading the latest Arch Linux image and its GPG signature."
+msg "Downloading the latest Arch Linux image and its GPG signature:"
 if ! [ -x "$(command -v wget)" ]; then
   if ! [ -x "$(command -v curl)" ]; then
-    say "ERROR: please install either 'wget' or 'curl' to be able to proceed."
+    msg "ERROR: please install either 'wget' or 'curl' to be able to proceed."
     exit
   else
     curl --progress-bar \
@@ -37,34 +38,35 @@ else
 fi
 
 # Verify the signature.
-say "Verifying image signature."
+msg "\nVerifying image signature:"
 gpg --keyserver-options auto-key-retrieve --verify *.iso.sig *.iso
-say "Output above should contain \"Good signature from ...\". \
+msg "Output above should contain \"Good signature from ...\". \
 Also, you need to compare the fingerprint with the official PGP \
 fingerprint (from https://archlinux.org/download/)."
-ask "Do you want to proceed [y/N]? "
+ask "Do you want to proceed [y/N]?"
 
-if [[ $response =~ ^(yes|y|Y|YES|Yes)$ ]]; then
+if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   # Scan hardware for storage devices.
-  lsblk -ado PATH,SIZE
-  ask "Choose the drive:" " /dev/" && disk="/dev/$response"
-  ask "This will delete all the data on $disk. Do you agree [y/N]? "
-  if [[ $response =~ ^(yes|y|Y|YES|Yes)$ ]]; then
+  msg "\nAvailable storage devices:"
+  lsblk -ao PATH,SIZE,TYPE,MOUNTPOINTS
+  ask "Choose the drive (with TYPE==disk):" "/dev/" && disk="/dev/$RESPONSE"
+  ask "This will delete all the data on $disk. Do you agree [y/N]?"
+  if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
     # Return "true", if umount throws "not mounted" error.
-    say "Writing the image. Do not remove the drive."
-    say "[Note that writing to disks requires superuser access.]"
+    msg "\nWriting to disks requires superuser access:"
     umount -q $disk?* || /bin/true && sudo wipefs --all $disk
     # Write image into USB disk.
+    msg "Writing the image. Do NOT remove the drive."
     sudo dd bs=4M if=archlinux-x86_64.iso of=$disk \
       conv=fsync oflag=direct status=progress
     # Check that all data is transferred and remove the drive.
     sudo sync && sudo eject $disk
-    say "USB installation medium successfully created."
+    msg "Installation medium successfully created."
   else
-    say "Canceling operation."
+    msg "Canceling operation."
   fi
 else
-  say "Canceling operation."
+  msg "Canceling operation."
 fi
 
 # Remove temporary directory.
