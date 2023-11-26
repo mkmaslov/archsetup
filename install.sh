@@ -113,6 +113,8 @@ else
   sgdisk ${DISK} -Zo -I -n 1:0:512M -t 1:ef00 -c 1:EFI \
     -n 2:0:0 -t 2:8e00 -c 2:LVM &>/dev/null
 fi
+msg "Current partition table:"
+sgdisk -p ${DISK}
 confirm
 
 # Notify kernel about filesystem changes and get partition labels.
@@ -156,23 +158,29 @@ PKGS+="fwupd efibootmgr sbctl "
 # CLI tools.
 PKGS+="tmux zsh neovim btop git go man-db man-pages texinfo "
 # Fonts.
-PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
+PKGS+="terminus-font "
 # Networking tools.
 PKGS+="networkmanager wpa_supplicant network-manager-applet firefox "
-PKGS+="torbrowser-launcher "
 # GNOME desktop environment.
 PKGS+="gdm gnome-control-center gnome-shell-extensions gnome-themes-extra "
 PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring eog "
 PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
 # File(system) management tools.
 PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility gvfs-mtp "
-# Miscelaneous applications.
-# Applications that are rarely used and should be installed in a VM:
-# easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
-PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
-PKGS+="transmission-gtk "
-# Virtualization software
-PKGS+="qemu-base libvirt virt-manager iptables-nft dnsmasq"
+ask "Do you want to install miscellaneous applications [y/N]?"
+if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
+  # Fonts.
+  PKGS+="adobe-source-code-pro-fonts adobe-source-sans-fonts "
+  # Networking tools.
+  PKGS+="torbrowser-launcher "
+  # Miscelaneous applications.
+  # Applications that are rarely used and should be installed in a VM:
+  # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
+  PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
+  PKGS+="transmission-gtk "
+  # Virtualization software
+  PKGS+="qemu-base libvirt virt-manager iptables-nft dnsmasq"
+fi
 pacstrap -K /mnt ${PKGS}
 confirm
 
@@ -241,6 +249,7 @@ sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont bl
 # Create Unified Kernel Image.
 # Also, add "quiet" later.
 msg "Creating Unified Kernel Image:"
+# i915.modeset=0 nouveau.modeset=1
 echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > /mnt/etc/kernel/cmdline
 echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > /mnt/etc/kernel/cmdline_fallback
 cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
