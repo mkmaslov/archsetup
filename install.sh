@@ -179,7 +179,13 @@ if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
   PKGS+="transmission-gtk "
   # Virtualization software
-  PKGS+="qemu-base libvirt virt-manager iptables-nft dnsmasq"
+  PKGS+="qemu-base libvirt virt-manager iptables-nft dnsmasq "
+fi
+ask "Do you want to install miscellaneous applications [y/N]?"
+NVIDIA=1 && ask "Do you want to install NVIDIA driver [y/N]?"
+if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
+  NVIDIA=0
+  PKGS+="nvidia "
 fi
 pacstrap -K /mnt ${PKGS}
 confirm
@@ -244,7 +250,11 @@ ${SWAP}            none   swap    defaults     0       0
 EOF
 
 # Configure mkinitcpio.
-sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g' /mnt/etc/mkinitcpio.conf
+if [ "$NVIDIA" -eq 0 ]; then
+  sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf sd-vconsole block sd-encrypt lvm2 filesystems fsck),g' /mnt/etc/mkinitcpio.conf
+else
+  sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g' /mnt/etc/mkinitcpio.conf
+fi
 
 # Create Unified Kernel Image.
 # Also, add "quiet" later.
