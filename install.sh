@@ -17,16 +17,16 @@ ask () { status "$1 " && echo -ne "$2" && read RESPONSE; }
 
 # Confirm continuing installation.
 confirm() { 
-    status "Press \"Enter\" to continue, \"Ctrl+c\" to cancel ..."
-    read -p ""
-    clear
+  status "Press \"Enter\" to continue, \"Ctrl+c\" to cancel ..."
+  read -p ""
+  clear
 }
 confirm_action() { 
-    ask "${1} [y/N]?"
-    if [[ !(${RESPONSE} =~ ^(yes|y|Y|YES|Yes)$) ]]; then
-        msg "Cancelling installation." && exit
-    fi
-    clear
+  ask "${1} [y/N]?"
+  if [[ !(${RESPONSE} =~ ^(yes|y|Y|YES|Yes)$) ]]; then
+    msg "Cancelling installation." && exit
+  fi
+  clear
 }
 
 # Reset terminal window.
@@ -58,14 +58,14 @@ status "Testing Internet connection:"
 ping -w 5 archlinux.org &>/dev/null
 NREACHED=${?}
 if [ ${NREACHED} -ne 0 ]; then
-    error "failed."
-    status "Before proceeding with the installation,"
-    msg    "please make sure you have a functional Internet connection."
-    msg    "To connect to a WiFi network, use: "
-    cprint " >> iwctl station wlan0 connect <ESSID>."
-    msg    "To manually test the Internet connection, use: "
-    cprint " >> ping archlinux.org."
-    exit
+  error "failed."
+  status "Before proceeding with the installation,"
+  msg    "please make sure you have a functional Internet connection."
+  msg    "To connect to a WiFi network, use: "
+  cprint " >> iwctl station wlan0 connect <ESSID>."
+  msg    "To manually test the Internet connection, use: "
+  cprint " >> ping archlinux.org."
+  exit
 else
   success "success."
   timedatectl set-ntp true
@@ -92,9 +92,9 @@ confirm_action "Is the time correct and synchronized"
 # Detect CPU vendor.
 CPU=$(grep vendor_id /proc/cpuinfo)
 if [[ ${CPU} == *"AuthenticAMD"* ]]; then
-    MICROCODE=amd-ucode
+  MICROCODE=amd-ucode
 else
-    MICROCODE=intel-ucode
+  MICROCODE=intel-ucode
 fi
 
 # Choose a target drive.
@@ -181,8 +181,7 @@ if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   # Virtualization software
   PKGS+="qemu-base libvirt virt-manager iptables-nft dnsmasq "
 fi
-ask "Do you want to install miscellaneous applications [y/N]?"
-NVIDIA=1 && ask "Do you want to install NVIDIA driver [y/N]?"
+NVIDIA=1 && ask "Do you want to install proprietary NVIDIA driver [y/N]?"
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   NVIDIA=0
   PKGS+="nvidia "
@@ -198,22 +197,27 @@ systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
 systemctl enable gdm.service --root=/mnt &>/dev/null
 systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
 systemctl mask geoclue.service --root=/mnt &>/dev/null
+if [ "$NVIDIA" -eq 0 ]; then
+  systemctl enable nvidia-suspend.service --root=/mnt &>/dev/null
+  systemctl enable nvidia-hibernate.service --root=/mnt &>/dev/null
+  systemctl enable nvidia-resume.service --root=/mnt &>/dev/null
+fi
 
 # Set hostname.
 ask "Choose a hostname:" && HOSTNAME="${RESPONSE}"
 echo "${HOSTNAME}" > /mnt/etc/hostname
 cat >> /mnt/etc/hosts <<EOF
-127.0.0.1   localhost
-::1         localhost
-127.0.1.1   $HOSTNAME.localdomain   $HOSTNAME
+  127.0.0.1   localhost
+  ::1         localhost
+  127.0.1.1   $HOSTNAME.localdomain   $HOSTNAME
 EOF
 
 # Set up locale.
 echo "en_IE.UTF-8 UTF-8"  > /mnt/etc/locale.gen
 echo "LANG=en_IE.UTF-8" > /mnt/etc/locale.conf
 cat > /mnt/etc/vconsole.conf <<EOF
-KEYMAP=us
-FONT=ter-132b
+  KEYMAP=us
+  FONT=ter-132b
 EOF
 arch-chroot /mnt locale-gen &>/dev/null
 
@@ -230,10 +234,10 @@ msg "Choose a password for ${USERNAME}:"
 arch-chroot /mnt passwd ${USERNAME}
 sed -i 's/# \(%wheel ALL=(ALL\(:ALL\|\)) ALL\)/\1/g' /mnt/etc/sudoers
 cat > /mnt/etc/gdm/custom.conf <<EOF
-[daemon]
-WaylandEnable=True
-AutomaticLoginEnable=True
-AutomaticLogin=${USERNAME}
+  [daemon]
+  WaylandEnable=True
+  AutomaticLoginEnable=True
+  AutomaticLogin=${USERNAME}
 EOF
 clear
 
@@ -242,34 +246,49 @@ echo "EDITOR=nvim" >> /mnt/etc/environment
 
 # Configure disk mapping tables.
 echo "lvm $LVM - luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
-no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
+  no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
 cat >> /mnt/etc/fstab <<EOF
-${EFI}             /efi   vfat    defaults     0       0
-${ROOT}            /      ext4    defaults     0       0
-${SWAP}            none   swap    defaults     0       0
+  ${EFI}             /efi   vfat    defaults     0       0
+  ${ROOT}            /      ext4    defaults     0       0
+  ${SWAP}            none   swap    defaults     0       0
 EOF
 
 # Configure mkinitcpio.
+sed -i "s,HOOKS=(base udev autodetect modconf kms keyboard keymap \
+  consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect \
+  modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g" \
+  /mnt/etc/mkinitcpio.conf
 if [ "$NVIDIA" -eq 0 ]; then
-  sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf sd-vconsole block sd-encrypt lvm2 filesystems fsck),g' /mnt/etc/mkinitcpio.conf
-else
-  sed -i 's,HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g' /mnt/etc/mkinitcpio.conf
+  sed -i "s,MODULES=(), \
+    MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm),g" \
+    /mnt/etc/mkinitcpio.conf
 fi
 
 # Create Unified Kernel Image.
 # Also, add "quiet" later.
 msg "Creating Unified Kernel Image:"
 # i915.modeset=0 nouveau.modeset=1
-echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > /mnt/etc/kernel/cmdline
-echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > /mnt/etc/kernel/cmdline_fallback
+if [ "$NVIDIA" -eq 0 ]; then
+  echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw \
+  nvidia_drm.modeset=1 nvidia_drm.fbdev=1" > \
+    /mnt/etc/kernel/cmdline
+  echo "options nvidia \
+    NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp" > \
+    /mnt/etc/modprobe.d/nvidia-power-management.conf
+else
+  echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > \
+    /mnt/etc/kernel/cmdline
+fi
+echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > \
+  /mnt/etc/kernel/cmdline_fallback
 cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
-ALL_config="/etc/mkinitcpio.conf"
-ALL_kver="/boot/vmlinuz-linux"
-ALL_microcode=(/boot/*-ucode.img)
-PRESETS=('default' 'fallback')
-default_uki="/efi/EFI/Linux/arch.efi"
-fallback_options="-S autodetect --cmdline /etc/kernel/cmdline_fallback"
-fallback_uki="/efi/EFI/Linux/arch-fb.efi"
+  ALL_config="/etc/mkinitcpio.conf"
+  ALL_kver="/boot/vmlinuz-linux"
+  ALL_microcode=(/boot/*-ucode.img)
+  PRESETS=('default' 'fallback')
+  default_uki="/efi/EFI/Linux/arch.efi"
+  fallback_options="-S autodetect --cmdline /etc/kernel/cmdline_fallback"
+  fallback_uki="/efi/EFI/Linux/arch-fb.efi"
 EOF
 mkdir /mnt/efi/EFI && mkdir /mnt/efi/EFI/Linux
 arch-chroot /mnt mkinitcpio -P
@@ -297,10 +316,10 @@ efibootmgr --create --disk ${DISK} --part 1 \
 
 # Finishing installation.
 success "** Installation completed successfully! **"
-msg "Please set up the desired boot order using:"
-msg " >> efibootmgr --bootorder XXXX,YYYY,..."
-msg "To remove unused boot entries, use:"
-msg " >> efibootmgr -b XXXX --delete-bootnum"
-msg "After finishing UEFI configuration, reboot into BIOS using:"
-msg " >> systemctl reboot --firmware-setup"
-msg "Inside the BIOS, enable Secure Boot and Boot Order Lock (if present)."
+msg    "Please set up the desired boot order using:"
+cprint " >> efibootmgr --bootorder XXXX,YYYY,..."
+msg    "To remove unused boot entries, use:"
+cprint " >> efibootmgr -b XXXX --delete-bootnum"
+msg    "After finishing UEFI configuration, reboot into BIOS using:"
+cprint " >> systemctl reboot --firmware-setup"
+msg    "Inside the BIOS, enable Secure Boot and Boot Order Lock (if present)."

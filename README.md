@@ -66,7 +66,7 @@ sudo wipefs --all /dev/sdX
 
 **Boot into installation medium**: during system boot activate certain key combination (e.g., `Fn+F12` on Lenovo laptops). 
 
-When booted, choose US keyboard layout using `loadkeys us`. On HiDPI displays, one can use `setfont ter-132b` to make text more readable. Verify Secure Boot status:
+When booted, choose US keyboard layout using `loadkeys us`. On HiDPI displays, one can use `setfont ter-132b` to make text more readable. Excessive notifications from audit framework can be disabled using `auditctl -e 0`. Verify Secure Boot status:
 ```console
 $ bootctl status | grep "Secure Boot"
 ...
@@ -103,7 +103,7 @@ Connect to Internet using a network cable or set up a Wi-Fi connection using [iw
 iwctl station wlan0 connect <YOUR-SSID>
 dhcpcd wlan0
 ```
-By default at boot, Arch Linux image assigns the name `wlan0` to the Wi-Fi card. If this isn't the case for some reason, one can list all Wi-Fi devices using `iwctl device list`. Also, one can scan for reachable Wi-Fi networks using `iwctl station <DEVICE-NAME> scan`.
+By default at boot, Arch Linux image assigns the name `wlan0` to the Wi-Fi card. If this isn't the case for some reason, one can list all Wi-Fi devices using `iwctl device list` or all network devices using `ip link show`. Also, one can scan for reachable Wi-Fi networks using `iwctl station <DEVICE-NAME> scan`.
 
 To verify if the connection to Internet is functioning, use `ping archlinux.org`.
 
