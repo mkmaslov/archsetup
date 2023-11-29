@@ -163,7 +163,7 @@ modprobe dm-crypt && cryptsetup benchmark
 ```
 On hardware that supports AES acceleration, `aes-xts-plain64` will be the fastest method. Create `luks2` container with `512 byte` key length:
 ```
-cryptsetup luksFormat --cipher=aes-xts-plain64 --keysize=512 --verify-passphrase /dev/sdX2
+cryptsetup luksFormat --cipher=aes-xts-plain64 --key-size=512 --verify-passphrase /dev/sdX2
 ```
 Open the encrypted partition:
 ```
@@ -381,6 +381,41 @@ systemctl reboot --firmware-setup
   * Code Runner extension
   * Wolfram language extension
  
+## Setting up backup storage
 
-# Comments
+Set up a luks-encrypted external drive at `<DISK-PATH>` (like `/dev/sda`):
+```
+sgdisk <DISK-PATH> -Zo -I -n 1:0:0 -t 1:8300 -c 1:CRBK
+cryptsetup luksFormat --cipher=aes-xts-plain64 --key-size=512 --verify-passphrase <DISK-PATH>
+cryptsetup open <DISK-PATH> cryptbackup
+mkfs.ext4 /dev/mapper/cryptbackup
+cryptsetup close cryptbackup
+```
+
+Use `lsblk -f` to determine `<DISK-UUID>` of `<DISK-PATH>`, then add an entry to `/etc/crypttab`:
+```console
+$ nano /etc/crypttab
+#  <name>         <device>          <password>    <options>
+   cryptbackup    UUID=<DISK-UUID>  none          luks,noauto
+```
+Create target folder to mount backup storage in your `<USER>`'s folder:
+```
+sudo mkdir /run/media/<USER>/cryptbackup
+sudo chown <USER> /run/media/<USER>/cryptbackup
+sudo chmod 777 /run/media/<USER>/cryptbackup
+```
+Add an entry to `/etc/fstab`:
+```console
+$ nano /etc/fstab
+#  <filesystem>               <dir>                           <type>  <options>  <dump>  <pass>
+   /dev/mapper/cryptbackup    /run/media/<USER>/cryptbackup   ext4    rw,noauto  0       0
+```
+
+To synchronize folders, use `rsync`:
+```
+rsync -a --delete --progress /source/path/ /target/path
+```
+
+
+## Comments
 [^C1]: Without a properly synchronized clock many essential tools won't work. For instance, `pacman -Syu` will fail due to time inconsistencies in GPG signatures (*"GPG key from the future"* error), which may subsequently lead to a non-bootable system if `pacman` fails to regenerate `initramfs`.
