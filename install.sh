@@ -62,9 +62,9 @@ if [ ${NREACHED} -ne 0 ]; then
   status "Before proceeding with the installation,"
   msg    "please make sure you have a functional Internet connection."
   msg    "To connect to a WiFi network, use: "
-  cprint " >> iwctl station wlan0 connect <ESSID>."
+  cprint " >> iwctl station wlan0 connect <ESSID>.\n"
   msg    "To manually test the Internet connection, use: "
-  cprint " >> ping archlinux.org."
+  cprint " >> ping archlinux.org.\n"
   exit
 else
   success "success."
@@ -244,40 +244,42 @@ clear
 # Set up nvim as default editor globally.
 echo "EDITOR=nvim" >> /mnt/etc/environment
 
-# Configure disk mapping tables.
+# Configure disk mapping during decryption. (do NOT add spaces/tabs)
 echo "lvm $LVM - luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
-  no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
+no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
+
+# Configure disk mapping after decryption.
 cat >> /mnt/etc/fstab <<EOF
   ${EFI}             /efi   vfat    defaults     0       0
   ${ROOT}            /      ext4    defaults     0       0
   ${SWAP}            none   swap    defaults     0       0
 EOF
 
-# Configure mkinitcpio.
+# Changing mkinitcpio hooks. (do NOT add spaces/tabs)
 sed -i "s,HOOKS=(base udev autodetect modconf kms keyboard keymap \
-  consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect \
-  modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g" \
-  /mnt/etc/mkinitcpio.conf
+consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect \
+modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g" \
+/mnt/etc/mkinitcpio.conf
+
+# Adding mkinitcpio modules.
 if [ "$NVIDIA" -eq 0 ]; then
-  sed -i "s,MODULES=(), \
-    MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm),g" \
-    /mnt/etc/mkinitcpio.conf
+  sed -i "s,MODULES=(),\
+  MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm),g" \
+  /mnt/etc/mkinitcpio.conf
 fi
 
 # Create Unified Kernel Image.
 # Also, add "quiet" later.
 msg "Creating Unified Kernel Image:"
-# i915.modeset=0 nouveau.modeset=1
 if [ "$NVIDIA" -eq 0 ]; then
   echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw \
-  nvidia_drm.modeset=1 nvidia_drm.fbdev=1" > \
-    /mnt/etc/kernel/cmdline
+  nvidia_drm.modeset=1 nvidia_drm.fbdev=1" > /mnt/etc/kernel/cmdline
   echo "options nvidia \
-    NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp" > \
-    /mnt/etc/modprobe.d/nvidia-power-management.conf
+  NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp" > \
+  /mnt/etc/modprobe.d/nvidia-power-management.conf
 else
-  echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > \
-    /mnt/etc/kernel/cmdline
+  echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw quiet" > \
+  /mnt/etc/kernel/cmdline
 fi
 echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > \
   /mnt/etc/kernel/cmdline_fallback
@@ -297,11 +299,12 @@ rm /mnt/boot/initramfs-*.img &>/dev/null || true
 confirm
 
 # Configure Secure Boot.
+#chattr -i /sys/firmware/efi/efivars/{KEK,db}* || true
+#sbctl enroll-keys --microsoft
 msg "Configuring Secure Boot:"
 arch-chroot /mnt /bin/bash -e <<EOF
   sbctl create-keys
-  chattr -i /sys/firmware/efi/efivars/{KEK,db}* || true
-  sbctl enroll-keys --microsoft
+  sbctl enroll-keys
   sbctl sign --save /efi/EFI/Linux/arch.efi
   sbctl sign --save /efi/EFI/Linux/arch-fb.efi
 EOF
@@ -317,9 +320,9 @@ efibootmgr --create --disk ${DISK} --part 1 \
 # Finishing installation.
 success "** Installation completed successfully! **"
 msg    "Please set up the desired boot order using:"
-cprint " >> efibootmgr --bootorder XXXX,YYYY,..."
+cprint " >> efibootmgr --bootorder XXXX,YYYY,...\n"
 msg    "To remove unused boot entries, use:"
-cprint " >> efibootmgr -b XXXX --delete-bootnum"
+cprint " >> efibootmgr -b XXXX --delete-bootnum\n"
 msg    "After finishing UEFI configuration, reboot into BIOS using:"
-cprint " >> systemctl reboot --firmware-setup"
+cprint " >> systemctl reboot --firmware-setup\n"
 msg    "Inside the BIOS, enable Secure Boot and Boot Order Lock (if present)."
