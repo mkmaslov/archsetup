@@ -196,12 +196,17 @@ systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
 systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
 systemctl enable gdm.service --root=/mnt &>/dev/null
 systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
-systemctl mask geoclue.service --root=/mnt &>/dev/null
 if [ "$NVIDIA" -eq 0 ]; then
   systemctl enable nvidia-suspend.service --root=/mnt &>/dev/null
   systemctl enable nvidia-hibernate.service --root=/mnt &>/dev/null
   systemctl enable nvidia-resume.service --root=/mnt &>/dev/null
 fi
+
+# Mask useless services.
+systemctl mask geoclue.service --root=/mnt &>/dev/null
+systemctl mask org.gnome.SettingsDaemon.UsbProtection.service --root=/mnt &>/dev/null
+systemctl mask org.gnome.SettingsDaemon.Wacom.service --root=/mnt &>/dev/null
+systemctl mask org.gnome.SettingsDaemon.Smartcard.service --root=/mnt &>/dev/null
 
 # Set hostname.
 ask "Choose a hostname:" && HOSTNAME="${RESPONSE}"
@@ -243,6 +248,9 @@ clear
 
 # Set up nvim as default editor globally.
 echo "EDITOR=nvim" >> /mnt/etc/environment
+
+# Create default directory for PulseAudio. (to avoid journalctl warning)
+mkdir -p /mnt/etc/pulse/default.pa.d
 
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
 echo "lvm $LVM - luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\

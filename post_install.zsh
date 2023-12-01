@@ -12,6 +12,54 @@
 set -e
 RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
 
+# Highlight the output.
+YELLOW="\e[1;33m" && COLOR_OFF="\e[0m"
+cprint() { echo -e "${YELLOW}${1}${COLOR_OFF}"; }
+
+# Confirm continuing
+confirm() { 
+  cprint "Press \"Enter\" to continue, \"Ctrl+c\" to cancel ..."
+  read -p ""
+  clear
+}
+
+# Installing yay AUR helper
+cprint "Installing yay AUR helper"
+mkdir temp && cd temp
+git clone https://aur.archlinux.org/yay.git
+cd yay && makepkg -si --noconfirm && cd .. && cd .. && rm -rf temp
+
+# Installing software from AUR
+cprint "Installing software from AUR"
+archupdate
+yes | yay -S --answerclean All --answerdiff None --removemake\
+  numix-icon-theme-git numix-square-icon-theme forticlient-vpn \
+  protonvpn-cli zoom skypeforlinux-stable-bin seafile-client \
+  gnome-browser-connector
+confirm
+
+# Configuring GNOME
+cprint "Configuring GNOME"
+gsettings set \
+  org.gnome.desktop.wm.preferences button-layout ':minimize,maximize,close'
+gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+gsettings set org.gnome.desktop.interface icon-theme 'Numix-Square'
+gsettings set org.gnome.mutter dynamic-workspaces false
+gsettings set org.gnome.desktop.wm.preferences num-workspaces 5
+
+# Installing GNOME extensions
+EXTENSION_LIST=(
+dash-to-panel@jderose9.github.com
+appindicatorsupport@rgcjonas.gmail.com
+)
+for EXTENSION in "${EXTENSION_LIST[@]}"
+do
+  busctl --user call org.gnome.Shell.Extensions \
+  /org/gnome/Shell/Extensions org.gnome.Shell.Extensions \
+  InstallRemoteExtension s ${EXTENSION}
+done
+confirm
+
 # Configure zsh shell (user).
 chsh -s /bin/zsh
 mkdir ${HOME}/.zsh_plugins
@@ -28,17 +76,7 @@ su -c "(cd /root/.zsh_plugins; git clone --depth 1 --\
 curl "${RES}/root.zshrc" > ".temp_zshrc"
 sudo mv ".temp_zshrc" "/root/.zshrc"
 
-# Install yay AUR helper.
-mkdir temp && cd temp
-git clone https://aur.archlinux.org/yay.git
-cd yay && makepkg -si --noconfirm && cd .. && cd .. && rm -rf temp
 
-# Install software from AUR.
-archupdate
-yes | yay -S --answerclean All --answerdiff None --removemake\
-  numix-icon-theme-git numix-square-icon-theme forticlient-vpn \
-  protonvpn-cli zoom skypeforlinux-stable-bin seafile-client \
-  gnome-browser-connector
 
 # Configure nvim text editor (user and root).
 curl "${RES}/.vimrc" > ".temp_vimrc"
