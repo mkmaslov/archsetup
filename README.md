@@ -358,7 +358,7 @@ umount -R /mnt
 systemctl reboot --firmware-setup
 ```
 
-## Recommended software
+## Software
 
 - [firefox](https://archlinux.org/packages/extra/x86_64/firefox/) -- FOSS non-Chromium based browser. The default settings are not security/privacy-friendly. One needs to set up the following:
    * go through settings, opt out of telemetry, set permissions
@@ -380,6 +380,9 @@ systemctl reboot --firmware-setup
   * Jupyter extension
   * Code Runner extension
   * Wolfram language extension
+- [zoom](https://aur.archlinux.org/packages/zoom) -- **proprietary** video conferencing.<br>
+(to enable screen sharing: `Settings -> Share Screen -> Advanced -> PipeWire Mode`)
+
  
 ## Setting up backup storage
 

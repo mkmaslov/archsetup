@@ -48,6 +48,7 @@ gsettings set org.gnome.mutter dynamic-workspaces false
 gsettings set org.gnome.desktop.wm.preferences num-workspaces 5
 
 # Installing GNOME extensions
+cprint "Installing GNOME extensions (ignore errors, choose \"Install\")"
 EXTENSION_LIST=(
 dash-to-panel@jderose9.github.com
 appindicatorsupport@rgcjonas.gmail.com
@@ -56,7 +57,7 @@ for EXTENSION in "${EXTENSION_LIST[@]}"
 do
   busctl --user call org.gnome.Shell.Extensions \
   /org/gnome/Shell/Extensions org.gnome.Shell.Extensions \
-  InstallRemoteExtension s ${EXTENSION}
+  InstallRemoteExtension s ${EXTENSION} || true
 done
 confirm
 
