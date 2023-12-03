@@ -6,6 +6,7 @@ set -e
 
 # It enables luks encryption and configures Wayland display server,
 # GNOME desktop environment and Unified Kernel Image for UEFI Secure Boot.
+RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main"
 
 # Highlight the output.
 YELLOW="\e[1;33m" && RED="\e[1;31m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
@@ -233,7 +234,8 @@ arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 msg "Choose a password for the root user:"
 arch-chroot /mnt passwd
 ask "Choose a username of a non-root user:" && USERNAME="${RESPONSE}"
-arch-chroot /mnt useradd -m -G wheel ${USERNAME}
+arch-chroot /mnt useradd -m -G wheel -s /bin/zsh ${USERNAME}
+curl "${RES}/resources/user.zshrc" > "/mnt/home/${USERNAME}/.zshrc"
 msg "Choose a password for ${USERNAME}:"
 arch-chroot /mnt passwd ${USERNAME}
 sed -i 's/# \(%wheel ALL=(ALL\(:ALL\|\)) ALL\)/\1/g' /mnt/etc/sudoers
@@ -326,9 +328,7 @@ efibootmgr --create --disk ${DISK} --part 1 \
   --label "Arch Linux (fallback)" --loader "EFI\\Linux\\arch-fb.efi"
 
 # Download post-install script.
-curl \
-  "https://raw.githubusercontent.com/mkmaslov/archsetup/main/post_install.zsh" > \
-  /mnt/home/${USERNAME}/post_install.zsh
+curl "${RES}/post_install.zsh" > /mnt/home/${USERNAME}/post_install.zsh
 
 # Finish installation.
 success "** Installation completed successfully! **"

@@ -23,11 +23,6 @@ confirm() {
   clear
 }
 
-# Configure zsh shell (user).
-chsh -s /bin/zsh
-curl "${RES}/user.zshrc" > "${HOME}/.zshrc"
-source ${HOME}/.zshrc
-
 # Configure zsh shell (root).
 su -c "chsh -s /bin/zsh"
 curl "${RES}/root.zshrc" > ".temp_zshrc"
