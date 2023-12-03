@@ -22,7 +22,7 @@ ask () { status "$1 " && echo -ne "$2" && read RESPONSE; }
 # If not and the disks are already mounted - unmount and encrypt the drives.
 confirm() { 
   ask "${1} [Y/n]?"
-  if [[ !(${RESPONSE} =~ ^(no|n|N|NO|No)$) ]]; then
+  if [[ ${RESPONSE} =~ ^(no|n|N|NO|No)$ ]]; then
     msg "Cancelling installation."
     if [ "$MOUNTED" -eq 0 ]; then
       umount ${EFI}
