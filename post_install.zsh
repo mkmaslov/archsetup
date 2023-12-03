@@ -24,18 +24,15 @@ confirm() {
 }
 
 # Enable pipewire.
-sudo systemctl enable --user pipewire-pulse.service
+systemctl enable --user pipewire-pulse.service
 
 # Install software.
 cprint "Installing packages:"
 sudo pacman -Syu
-PKGS=""
-# easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
-PKGS+="calibre gimp vlc guvcview signal-desktop telegram-desktop "
-PKGS+="transmission-gtk torbrowser-launcher "
-# Virtualization software
-PKGS+="qemu-base libvirt virt-manager iptables-nft dnsmasq "
-sudo pacman -S ${PKGS}
+sudo pacman -S \
+  calibre gimp vlc guvcview signal-desktop telegram-desktop \
+  transmission-gtk torbrowser-launcher \
+  qemu-base libvirt virt-manager iptables-nft dnsmasq 
 confirm
 
 # Installing yay AUR helper
