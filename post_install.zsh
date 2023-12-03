@@ -23,13 +23,27 @@ confirm() {
   clear
 }
 
+# Enable pipewire.
+sudo systemctl enable --user pipewire-pulse.service
+
+# Install software.
+cprint "Installing packages:"
+sudo pacman -Syu
+PKGS=""
+# easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
+PKGS+="calibre gimp vlc guvcview signal-desktop telegram-desktop "
+PKGS+="transmission-gtk torbrowser-launcher "
+# Virtualization software
+PKGS+="qemu-base libvirt virt-manager iptables-nft dnsmasq "
+sudo pacman -S ${PKGS}
+confirm
+
 # Installing yay AUR helper
 cprint "Installing yay AUR helper"
 mkdir temp && cd temp
 git clone https://aur.archlinux.org/yay.git
 cd yay && makepkg -si --noconfirm && cd .. && cd .. && rm -rf temp
 
-# Installing software from AUR
 cprint "Installing software from AUR"
 archupdate
 yes | yay -S --answerclean All --answerdiff None --removemake\

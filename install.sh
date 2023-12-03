@@ -180,16 +180,6 @@ PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring eog "
 PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
 # File(system) management tools.
 PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility gvfs-mtp "
-ask "Do you want to install miscellaneous applications [y/N]?"
-if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
-  # Miscelaneous applications.
-  # Applications that are rarely used and should be installed in a VM:
-  # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
-  PKGS+="calibre gimp vlc guvcview signal-desktop telegram-desktop "
-  PKGS+="transmission-gtk torbrowser-launcher "
-  # Virtualization software
-  PKGS+="qemu-base libvirt virt-manager iptables-nft dnsmasq "
-fi
 ask "Do you want to install proprietary NVIDIA driver [y/N]?"
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   NVIDIA=0
@@ -206,8 +196,6 @@ systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
 systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
 systemctl enable gdm.service --root=/mnt &>/dev/null
 systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
-systemctl enable pipewire-pulse.service --root=/mnt &>/dev/null
-systemctl disable pulseaudio.service --root=/mnt &>/dev/null
 if [ "$NVIDIA" -eq 0 ]; then
   systemctl enable nvidia-suspend.service --root=/mnt &>/dev/null
   systemctl enable nvidia-hibernate.service --root=/mnt &>/dev/null
