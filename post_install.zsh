@@ -23,8 +23,18 @@ confirm() {
   clear
 }
 
+# Configure zsh shell (user).
+chsh -s /bin/zsh
+curl "${RES}/user.zshrc" > "${HOME}/.zshrc"
+source ${HOME}/.zshrc
+
+# Configure zsh shell (root).
+su -c "chsh -s /bin/zsh"
+curl "${RES}/root.zshrc" > ".temp_zshrc"
+sudo mv ".temp_zshrc" "/root/.zshrc"
+
 # Enable pipewire.
-systemctl enable --user pipewire-pulse.service
+systemctl enable --user pipewire-pulse
 
 # Install software.
 cprint "Installing packages:"
@@ -71,16 +81,6 @@ do
   InstallRemoteExtension s ${EXTENSION} || true
 done
 confirm
-
-# Configure zsh shell (user).
-chsh -s /bin/zsh
-curl "${RES}/user.zshrc" > "${HOME}/.zshrc"
-source ${HOME}/.zshrc
-
-# Configure zsh shell (root).
-su -c "chsh -s /bin/zsh"
-curl "${RES}/root.zshrc" > ".temp_zshrc"
-sudo mv ".temp_zshrc" "/root/.zshrc"
 
 # Configure nvim text editor (user and root).
 curl "${RES}/.vimrc" > ".temp_vimrc"
