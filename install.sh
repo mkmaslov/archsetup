@@ -4,6 +4,9 @@ set -e
 
 # This script performs basic Arch Linux installation.
 
+# It enables luks encryption and configures Wayland display server,
+# GNOME desktop environment and Unified Kernel Image for UEFI Secure Boot.
+
 # Highlight the output.
 YELLOW="\e[1;33m" && RED="\e[1;31m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
 cprint() { echo -ne "${1}${2}${COLOR_OFF}"; }
@@ -15,18 +18,23 @@ success() { cprint ${GREEN} "${1}\n"; }
 # Prompt for a response.
 ask () { status "$1 " && echo -ne "$2" && read RESPONSE; }
 
-# Confirm continuing installation.
+# Confirm whether a vital requirement for continuing installation is fulfilled.
+# If not and the disks are already mounted - unmount and encrypt the drives.
 confirm() { 
-  status "Press \"Enter\" to continue, \"Ctrl+c\" to cancel ..."
-  read -p ""
-  clear
-}
-confirm_action() { 
-  ask "${1} [y/N]?"
-  if [[ !(${RESPONSE} =~ ^(yes|y|Y|YES|Yes)$) ]]; then
-    msg "Cancelling installation." && exit
+  ask "${1} [Y/n]?"
+  if [[ !(${RESPONSE} =~ ^(no|n|N|NO|No)$) ]]; then
+    msg "Cancelling installation."
+    if [ "$MOUNTED" -eq 0 ]; then
+      umount ${EFI}
+      umount ${ROOT}
+      swapoff ${SWAP}
+      vgchange -a n main
+      cryptsetup close ${LVM}
+    fi
+    exit
+  else
+    clear
   fi
-  clear
 }
 
 # Reset terminal window.
@@ -40,18 +48,18 @@ cprint "           [same as #1, but leaves space for Windows partition]\n"
 msg    "Option #3: Arch Linux for server."
 cprint "           [same as #1, but does not include GUI applications]\n"
 ask "Choose installation type:" "Option #"
-WINDOWS=1 && SERVER=1
+WINDOWS=1 && SERVER=1 && MOUNTED=1 && NVIDIA=1
 case $RESPONSE in
   "2") WINDOWS=0 ;;
   "3") SERVER=0 ;;
 esac
 
-# Check that Secure Boot is disabled.
+# Check whether Secure Boot is disabled.
 msg "\nFull Secure Boot reset is recommended before using this script. In BIOS:"
 msg "delete all SB keys, restore factory SB keys, then reset SB to Setup Mode."
 msg "Verifying Secure Boot status. Should return: disabled (setup)."
 bootctl --quiet status | grep "Secure Boot:"
-confirm_action "Did you reset and disable Secure Boot"
+confirm "Did you reset and disable Secure Boot"
 
 # Test Internet connection.
 status "Testing Internet connection:"
@@ -87,7 +95,7 @@ fi
 # Check system clock synchronization.
 msg "Checking time synchronization:"
 timedatectl status | grep -E 'Local time|synchronized'
-confirm_action "Is the time correct and synchronized"
+confirm "Is system time correct and synchronized"
 
 # Detect CPU vendor.
 CPU=$(grep vendor_id /proc/cpuinfo)
@@ -101,7 +109,7 @@ fi
 msg "List of all attached storage devices:"
 lsblk -ado PATH,SIZE
 ask "Choose target drive for installation:" "/dev/" && DISK="/dev/${RESPONSE}"
-confirm_action "This script will delete all the data on ${DISK}. Do you agree"
+confirm "This script will delete all the data on ${DISK}. Do you agree"
 
 # Partition the target drive.
 wipefs -af ${DISK} &>/dev/null
@@ -115,7 +123,7 @@ else
 fi
 msg "Current partition table:"
 sgdisk -p ${DISK}
-confirm
+confirm "Do you want to continue the installation"
 
 # Notify kernel about filesystem changes and get partition labels.
 sleep 1 && partprobe ${DISK}
@@ -142,8 +150,9 @@ mkfs.ext4 ${ROOT} &>/dev/null
 mkswap ${SWAP} && swapon ${SWAP}
 mount ${ROOT} /mnt
 mkdir /mnt/efi
-mount $EFI /mnt/efi
-confirm
+mount ${EFI} /mnt/efi
+MOUNTED=0
+confirm "Do you want to continue the installation"
 
 # Install packages to the / (root) partition.
 pacman -Sy
@@ -156,11 +165,15 @@ PKGS+="linux-firmware sof-firmware alsa-firmware ${MICROCODE} "
 # BIOS, UEFI and Secure Boot tools.
 PKGS+="fwupd efibootmgr sbctl "
 # CLI tools.
-PKGS+="tmux zsh neovim btop git go man-db man-pages texinfo "
+PKGS+="tmux neovim btop git go man-db man-pages texinfo "
+PKGS+="zsh zsh-completions zsh-syntax-highlighting zsh-autosuggestions "
 # Fonts.
-PKGS+="terminus-font "
+PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
 # Networking tools.
-PKGS+="networkmanager wpa_supplicant network-manager-applet firefox "
+PKGS+="networkmanager wpa_supplicant network-manager-applet firefox firewalld "
+# Audio.
+# pipewire is installed as dependency of mutter.
+PKGS+="pipewire-pulse pipewire-alsa pipewire-jack "
 # GNOME desktop environment.
 PKGS+="gdm gnome-control-center gnome-shell-extensions gnome-themes-extra "
 PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring eog "
@@ -169,33 +182,32 @@ PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
 PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility gvfs-mtp "
 ask "Do you want to install miscellaneous applications [y/N]?"
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
-  # Fonts.
-  PKGS+="adobe-source-code-pro-fonts adobe-source-sans-fonts "
-  # Networking tools.
-  PKGS+="torbrowser-launcher "
   # Miscelaneous applications.
   # Applications that are rarely used and should be installed in a VM:
   # easytag, unrar, lmms, tuxguitar, pdfarranger, okular, libreofice-fresh.
-  PKGS+="calibre gimp inkscape vlc guvcview signal-desktop telegram-desktop "
-  PKGS+="transmission-gtk "
+  PKGS+="calibre gimp vlc guvcview signal-desktop telegram-desktop "
+  PKGS+="transmission-gtk torbrowser-launcher "
   # Virtualization software
   PKGS+="qemu-base libvirt virt-manager iptables-nft dnsmasq "
 fi
-NVIDIA=1 && ask "Do you want to install proprietary NVIDIA driver [y/N]?"
+ask "Do you want to install proprietary NVIDIA driver [y/N]?"
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   NVIDIA=0
   PKGS+="nvidia "
 fi
 pacstrap -K /mnt ${PKGS}
-confirm
+confirm "Do you want to continue the installation"
 
 # Enable daemons.
 systemctl enable bluetooth --root=/mnt &>/dev/null
 systemctl enable NetworkManager --root=/mnt &>/dev/null
+systemctl enable firewalld.service --root=/mnt &>/dev/null
 systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
 systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
 systemctl enable gdm.service --root=/mnt &>/dev/null
 systemctl enable systemd-timesyncd.service --root=/mnt &>/dev/null
+systemctl enable pipewire-pulse.service --root=/mnt &>/dev/null
+systemctl disable pulseaudio.service --root=/mnt &>/dev/null
 if [ "$NVIDIA" -eq 0 ]; then
   systemctl enable nvidia-suspend.service --root=/mnt &>/dev/null
   systemctl enable nvidia-hibernate.service --root=/mnt &>/dev/null
@@ -233,8 +245,7 @@ arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 msg "Choose a password for the root user:"
 arch-chroot /mnt passwd
 ask "Choose a username of a non-root user:" && USERNAME="${RESPONSE}"
-arch-chroot /mnt useradd -m ${USERNAME}
-arch-chroot /mnt usermod -aG wheel ${USERNAME}
+arch-chroot /mnt useradd -m -G wheel ${USERNAME}
 msg "Choose a password for ${USERNAME}:"
 arch-chroot /mnt passwd ${USERNAME}
 sed -i 's/# \(%wheel ALL=(ALL\(:ALL\|\)) ALL\)/\1/g' /mnt/etc/sudoers
@@ -244,13 +255,15 @@ cat > /mnt/etc/gdm/custom.conf <<EOF
   AutomaticLoginEnable=True
   AutomaticLogin=${USERNAME}
 EOF
-clear
 
 # Set up nvim as default editor globally.
 echo "EDITOR=nvim" >> /mnt/etc/environment
 
 # Create default directory for PulseAudio. (to avoid journalctl warning)
 mkdir -p /mnt/etc/pulse/default.pa.d
+
+# Enable parallel downloads in pacman.
+sed -i 's,#ParallelDownloads,ParallelDownloads,g' /mnt/etc/pacman.conf
 
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
 echo "lvm $LVM - luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
@@ -263,24 +276,24 @@ cat >> /mnt/etc/fstab <<EOF
   ${SWAP}            none   swap    defaults     0       0
 EOF
 
-# Changing mkinitcpio hooks. (do NOT add spaces/tabs)
+# Change mkinitcpio hooks. (do NOT add spaces/tabs)
 sed -i "s,HOOKS=(base udev autodetect modconf kms keyboard keymap \
 consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect \
 modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g" \
 /mnt/etc/mkinitcpio.conf
 
-# Adding mkinitcpio modules.
+# Add mkinitcpio modules for NVIDIA driver.
 if [ "$NVIDIA" -eq 0 ]; then
   sed -i "s,MODULES=(),\
   MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm),g" \
   /mnt/etc/mkinitcpio.conf
 fi
+confirm "Do you want to continue the installation"
 
 # Create Unified Kernel Image.
-# Also, add "quiet" later.
 msg "Creating Unified Kernel Image:"
 if [ "$NVIDIA" -eq 0 ]; then
-  echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw \
+  echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw quiet \
   nvidia_drm.modeset=1 nvidia_drm.fbdev=1" > /mnt/etc/kernel/cmdline
   echo "options nvidia \
   NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp" > \
@@ -304,19 +317,18 @@ mkdir /mnt/efi/EFI && mkdir /mnt/efi/EFI/Linux
 arch-chroot /mnt mkinitcpio -P
 rm /mnt/efi/initramfs-*.img &>/dev/null || true
 rm /mnt/boot/initramfs-*.img &>/dev/null || true
-confirm
+confirm "Do you want to continue the installation"
 
 # Configure Secure Boot.
 #chattr -i /sys/firmware/efi/efivars/{KEK,db}* || true
-#sbctl enroll-keys --microsoft
 msg "Configuring Secure Boot:"
 arch-chroot /mnt /bin/bash -e <<EOF
   sbctl create-keys
-  sbctl enroll-keys
+  sbctl enroll-keys --microsoft
   sbctl sign --save /efi/EFI/Linux/arch.efi
   sbctl sign --save /efi/EFI/Linux/arch-fb.efi
 EOF
-confirm
+confirm "Do you want to continue the installation"
 
 # Add UEFI boot entries.
 msg "Adding UEFI boot entries:"
@@ -325,7 +337,12 @@ efibootmgr --create --disk ${DISK} --part 1 \
 efibootmgr --create --disk ${DISK} --part 1 \
   --label "Arch Linux (fallback)" --loader "EFI\\Linux\\arch-fb.efi"
 
-# Finishing installation.
+# Download post-install script.
+curl \
+  "https://raw.githubusercontent.com/mkmaslov/archsetup/main/post_install.zsh" > \
+  /mnt/home/${USERNAME}/post_install.zsh
+
+# Finish installation.
 success "** Installation completed successfully! **"
 msg    "Please set up the desired boot order using:"
 cprint " >> efibootmgr --bootorder XXXX,YYYY,...\n"
