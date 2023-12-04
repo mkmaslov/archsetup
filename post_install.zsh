@@ -19,8 +19,7 @@ cprint() { echo -e "${YELLOW}${1}${COLOR_OFF}"; }
 # Confirm continuing
 confirm() { 
   cprint "Press \"Enter\" to continue, \"Ctrl+c\" to cancel ..."
-  read -p ""
-  clear
+  read -s -k "?"
 }
 
 # Configure zsh shell (root).
@@ -34,7 +33,7 @@ systemctl enable --user pipewire-pulse
 # Install software.
 cprint "Installing packages:"
 sudo pacman -Syu
-sudo pacman -S \
+sudo pacman -S --needed \
   calibre gimp vlc guvcview signal-desktop telegram-desktop \
   transmission-gtk torbrowser-launcher \
   qemu-base libvirt virt-manager iptables-nft dnsmasq 
@@ -47,7 +46,7 @@ git clone https://aur.archlinux.org/yay.git
 cd yay && makepkg -si --noconfirm && cd .. && cd .. && rm -rf temp
 
 cprint "Installing software from AUR"
-archupdate
+yes | yay -Syu --answerclean All --answerdiff None --removemake
 yes | yay -S --answerclean All --answerdiff None --removemake\
   numix-icon-theme-git numix-square-icon-theme forticlient-vpn \
   protonvpn-cli zoom skypeforlinux-stable-bin seafile-client \
@@ -75,9 +74,11 @@ do
   /org/gnome/Shell/Extensions org.gnome.Shell.Extensions \
   InstallRemoteExtension s ${EXTENSION} || true
 done
+gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com
 confirm
 
 # Configure nvim text editor (user and root).
+cprint "Configuring nvim:"
 curl "${RES}/.vimrc" > ".temp_vimrc"
 cp ".temp_vimrc" "${HOME}/.vimrc"
 sudo mv ".temp_vimrc" "/root/.vimrc"
@@ -89,6 +90,7 @@ sudo mv "temp_init.vim" "/root/.config/nvim/init.vim"
 confirm
 
 # Setting up virtual environment for Python
+cprint "Setting up Python virtual environment:"
 PYDIR="${HOME}/.python_venv"
 PIP="${PYDIR}/bin/pip"
 JUPYTER="${PYDIR}/bin/jupyter"
@@ -100,10 +102,13 @@ EOF
 python -m venv ${PYDIR}
 ${PIP} install --upgrade pip --require-virtualenv
 ${PIP} install h5py numpy scipy sympy matplotlib notebook\
-  jupyter_contrib_nbextensions jupyter_nbextensions_configurator\
   --require-virtualenv
-${JUPYTER} contrib nbextension install --sys-prefix
-${JUPYTER} nbextensions_configurator enable --sys-prefix
+# nbextensions don't work with notebook 7.0
+#${PIP} install h5py numpy scipy sympy matplotlib notebook\
+#  jupyter_contrib_nbextensions jupyter_nbextensions_configurator\
+#  --require-virtualenv
+#${JUPYTER} contrib nbextension install --sys-prefix
+#${JUPYTER} nbextensions_configurator enable --sys-prefix
 mkdir "${PYDIR}/etc/jupyter/custom"
 curl "${RES}/custom.css" > "${PYDIR}/etc/jupyter/custom/custom.css"
 curl "${RES}/notebook.json" > "${PYDIR}/etc/jupyter/nbconfig/notebook.json"
@@ -122,10 +127,11 @@ cd install-tl-*
 curl "${RES}/texlive.profile" > "texlive.profile"
 perl install-tl -profile texlive.profile
 tlmgr update --all
-tlmgr install revtex physics bm graphics\
+tlmgr install revtex physics graphics tools\
   latex-bin geometry amsmath underscore dvipng
 # fix-cm type1cm latex tools
 cd .. && rm -rf ${TEMPDIR}
+confirm
 
 # Install LaTex extension for Inkscape.
 sudo pacman -S --needed inkscape gtksourceview3
