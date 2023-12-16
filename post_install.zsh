@@ -22,22 +22,25 @@ confirm() {
   read -s -k "?"
 }
 
+# Install software.
+cprint "Installing packages:"
+sudo pacman -Syu
+sudo pacman -S --needed \
+  gnome-disk-utility gvfs-mtp gnome-tweaks gnome-themes-extra eog gedit \
+  gnome-shell-extensions gnome-calculator xdg-user-dirs-gtk \
+  fwupd gimp vlc firefox adobe-source-code-pro-fonts adobe-source-sans-fonts \
+  calibre transmission-gtk exfatprogs guvcview signal-desktop telegram-desktop \
+  torbrowser-launcher qemu-base libvirt virt-manager iptables-nft dnsmasq 
+confirm
+
 # Configure zsh shell (root).
+cprint "Configuring zsh shell for root user. You will be prompted for password."
 su -c "chsh -s /bin/zsh"
 curl "${RES}/root.zshrc" > ".temp_zshrc"
 sudo mv ".temp_zshrc" "/root/.zshrc"
 
 # Enable pipewire.
 systemctl enable --user pipewire-pulse
-
-# Install software.
-cprint "Installing packages:"
-sudo pacman -Syu
-sudo pacman -S --needed \
-  calibre gimp vlc guvcview signal-desktop telegram-desktop \
-  transmission-gtk torbrowser-launcher \
-  qemu-base libvirt virt-manager iptables-nft dnsmasq 
-confirm
 
 # Installing yay AUR helper
 cprint "Installing yay AUR helper"
@@ -49,8 +52,8 @@ cprint "Installing software from AUR"
 yes | yay -Syu --answerclean All --answerdiff None --removemake
 yes | yay -S --answerclean All --answerdiff None --removemake\
   numix-icon-theme-git numix-square-icon-theme forticlient-vpn \
-  protonvpn-cli zoom skypeforlinux-stable-bin seafile-client \
-  gnome-browser-connector
+  protonvpn-cli seafile-client gnome-browser-connector vscodium-bin
+# zoom skypeforlinux-stable-bin 
 confirm
 
 # Configuring GNOME
@@ -58,9 +61,49 @@ cprint "Configuring GNOME"
 gsettings set \
   org.gnome.desktop.wm.preferences button-layout ':minimize,maximize,close'
 gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
 gsettings set org.gnome.desktop.interface icon-theme 'Numix-Square'
 gsettings set org.gnome.mutter dynamic-workspaces false
 gsettings set org.gnome.desktop.wm.preferences num-workspaces 5
+gsettings set org.gnome.desktop.interface show-battery-percentage true
+gsettings set org.gnome.desktop.interface enable-hot-corners false
+gsettings set org.gnome.desktop.interface enable-animations false
+gsettings set org.gnome.desktop.interface clock-format '24h'
+gsettings set org.gnome.desktop.interface clock-show-date true
+gsettings set org.gnome.desktop.interface clock-show-seconds true
+gsettings set org.gnome.desktop.interface clock-show-weekday true
+gsettings set org.gnome.desktop.privacy send-software-usage-stats false
+gsettings set org.gnome.desktop.privacy report-technical-problems false
+gsettings set org.gnome.desktop.privacy remove-old-temp-files true
+gsettings set org.gnome.desktop.privacy remove-old-trash-files true
+gsettings set org.gnome.desktop.privacy remember-recent-files false
+gsettings set org.gnome.desktop.privacy remember-app-usage false
+gsettings set org.gnome.desktop.privacy old-files-age 30
+gsettings set \
+  org.gnome.settings-daemon.plugins.power power-button-action 'suspend'
+gsettings set \
+  org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
+gsettings set \
+  org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 900
+gsettings set \
+  org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'suspend'
+gsettings set \
+  org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 900
+gsettings set org.gnome.settings-daemon.plugins.power idle-dim true
+gsettings set \
+  org.gnome.settings-daemon.plugins.power idle-brightness 30
+# Gedit configuration.
+gsettings set org.gnome.gedit.preferences.editor scheme 'oblivion'
+gsettings set org.gnome.gedit.preferences.editor use-default-font false
+gsettings set org.gnome.gedit.preferences.editor tabs-size 4
+gsettings set org.gnome.gedit.preferences.editor syntax-highlighting true
+gsettings set org.gnome.gedit.preferences.editor display-right-margin true
+gsettings set org.gnome.gedit.preferences.editor right-margin-position 80
+gsettings set org.gnome.gedit.preferences.editor editor-font 'Source Code Pro 14'
+gsettings set org.gnome.gedit.plugins.spell highlight-misspelled true
+# Nautilus configuration.
+gsettings set org.gnome.nautilus.preferences show-hidden-files true
+gsettings set org.gnome.nautilus.window-state initial-size (960,960)
 
 # Installing GNOME extensions
 cprint "Installing GNOME extensions (ignore errors, choose \"Install\")"
@@ -111,7 +154,8 @@ ${PIP} install h5py numpy scipy sympy matplotlib notebook\
 #${JUPYTER} nbextensions_configurator enable --sys-prefix
 mkdir "${PYDIR}/etc/jupyter/custom"
 curl "${RES}/custom.css" > "${PYDIR}/etc/jupyter/custom/custom.css"
-curl "${RES}/notebook.json" > "${PYDIR}/etc/jupyter/nbconfig/notebook.json"
+# They changed location.
+#curl "${RES}/notebook.json" > "${PYDIR}/etc/jupyter/nbconfig/notebook.json"
 confirm
 
 # Configure git to use keyring
@@ -129,7 +173,6 @@ perl install-tl -profile texlive.profile
 tlmgr update --all
 tlmgr install revtex physics graphics tools\
   latex-bin geometry amsmath underscore dvipng
-# fix-cm type1cm latex tools
 cd .. && rm -rf ${TEMPDIR}
 confirm
 

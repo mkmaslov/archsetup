@@ -61,7 +61,7 @@ if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
       conv=fsync oflag=direct status=progress
     # Check that all data is transferred and remove the drive.
     sudo sync && sudo eject $disk
-    msg "Installation medium successfully created."
+    msg "Installation medium successfully created. You can remove the drive."
   else
     msg "Canceling operation."
   fi

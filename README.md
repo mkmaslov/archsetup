@@ -9,6 +9,7 @@ This document provides detailed instructions for Arch Linux installation on x86-
 ---
 ### Contents
 * [Creating installation medium](#creating-installation-medium)
+* [Installing Windows as part of dual-boot setup](#installing-windows-as-part-of-dual-boot-setup)
 * [Verifying Secure Boot mode and UEFI mode](#verifying-secure-boot-mode-and-uefi-mode)
 * [Activating network connection](#activating-network-connection)
 * [Setting up time synchronization](#setting-up-time-synchronization)
@@ -56,6 +57,14 @@ To wipe the storage device after Arch Linux installation, the ISO 9660 filesyste
 sudo wipefs --all /dev/sdX
 ```
 
+## Installing Windows as part of dual-boot setup
+
+Windows needs to be installed before Linux. Follow these steps:
+1. [Create Windows 11 installation medium (from Windows).](https://www.microsoft.com/en-us/software-download/windows11)
+2. Download [autounattend.xml](https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources/autounattend.xml). Edit the file to set the size of Windows partition.
+2. Mount the installation medium and copy `autounattend.xml` to its root folder.
+3. Boot from the medium and install Windows.
+
 ## Verifying Secure Boot mode and UEFI mode
 
 **Enter BIOS**: during system boot activate certain key combination (e.g., `Fn+F2` on Lenovo laptops):
@@ -98,14 +107,23 @@ ls /sys/firmware/efi/efivars
 
 ## Activating network connection
 
-Connect to Internet using a network cable or set up a Wi-Fi connection using [iwd](https://wiki.archlinux.org/title/Iwd):
+Connect to Internet using a network cable or set up a Wi-Fi connection using [iwd](https://wiki.archlinux.org/title/Iwd) and [dhcpcd](https://wiki.archlinux.org/title/Dhcpcd):
 ```
-iwctl station wlan0 connect <YOUR-SSID>
+iwctl station wlan0 connect <SSID>
 dhcpcd wlan0
 ```
-By default at boot, Arch Linux image assigns the name `wlan0` to the Wi-Fi card. If this isn't the case for some reason, one can list all Wi-Fi devices using `iwctl device list` or all network devices using `ip link show`. Also, one can scan for reachable Wi-Fi networks using `iwctl station <DEVICE-NAME> scan`.
+By default at boot, Arch Linux assigns the name `wlan0` to the Wi-Fi card.<br>
+The following commands could be used to debug network connection:
+```
+ip link show                        # list all network devices
+iwctl device list                   # list all Wi-Fi devices
 
-To verify if the connection to Internet is functioning, use `ping archlinux.org`.
+rfkill list                         # list kill switch settings
+rfkill unblock <DEVICE-NUM>         # unblock soft-blocked device
+
+iwctl station <DEVICE-NAME> scan    # scan for Wi-Fi networks
+ping archlinux.org                  # test Internet connection
+```
 
 ## Setting up time synchronization
 

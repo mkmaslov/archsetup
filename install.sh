@@ -6,6 +6,7 @@ set -e
 
 # It enables luks encryption and configures Wayland display server,
 # GNOME desktop environment and Unified Kernel Image for UEFI Secure Boot.
+
 RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main"
 
 # Highlight the output.
@@ -40,6 +41,8 @@ confirm() {
 
 # Reset terminal window.
 loadkeys us && setfont ter-132b && clear
+
+# Choose instalaltion type.
 msg "** ARCH LINUX INSTALLATION **"
 msg "Installation types:"
 msg    "Option #1: Arch Linux for PC (single OS)"
@@ -107,18 +110,18 @@ else
 fi
 
 # Choose a target drive.
-msg "List of all attached storage devices:"
+msg "List of the attached storage devices:"
 lsblk -ado PATH,SIZE
 ask "Choose target drive for installation:" "/dev/" && DISK="/dev/${RESPONSE}"
-confirm "This script will delete all the data on ${DISK}. Do you agree"
 
-# Partition the target drive.
-wipefs -af ${DISK} &>/dev/null
+# Partition target drive.
 if [ "$WINDOWS" -eq 0 ]; then
-  ask "Enter size of Linux partition in GiB:"
-  sgdisk ${DISK} -Zo -I -n 1:0:512M -t 1:ef00 -c 1:EFI \
-    -n 2:0:+${RESPONSE}G -t 2:8e00 -c 2:LVM &>/dev/null
+  confirm "Installing Linux alongside Windows on ${DISK}. Do you agree"
+  # Windows creates 4 partitions, including EFI.
+  sgdisk ${DISK} -n 5:0:0 -t 5:8e00 -c 5:LVM &>/dev/null
 else
+  confirm "Deleting all data on ${DISK}. Do you agree"
+  wipefs -af ${DISK} &>/dev/null
   sgdisk ${DISK} -Zo -I -n 1:0:512M -t 1:ef00 -c 1:EFI \
     -n 2:0:0 -t 2:8e00 -c 2:LVM &>/dev/null
 fi
@@ -146,7 +149,7 @@ ROOT="/dev/mapper/main-root"
 pvcreate ${MAPLVM} && vgcreate main ${MAPLVM}
 lvcreate -L18G main -n swap
 lvcreate -l 100%FREE main -n root
-mkfs.fat -F 32 ${EFI} &>/dev/null
+[ "$WINDOWS" -eq 1 ] && mkfs.fat -F 32 ${EFI} &>/dev/null
 mkfs.ext4 ${ROOT} &>/dev/null
 mkswap ${SWAP} && swapon ${SWAP}
 mount ${ROOT} /mnt
@@ -163,24 +166,25 @@ PKGS=""
 PKGS+="base base-devel linux "
 # Drivers.
 PKGS+="linux-firmware sof-firmware alsa-firmware ${MICROCODE} "
-# BIOS, UEFI and Secure Boot tools.
-PKGS+="fwupd efibootmgr sbctl "
+# UEFI and Secure Boot tools.
+PKGS+="efibootmgr sbctl "
+# Documentation.
+PKGS+="man-db man-pages texinfo "
 # CLI tools.
-PKGS+="tmux neovim btop git go man-db man-pages texinfo "
+PKGS+="tmux neovim nano btop git go "
 PKGS+="zsh zsh-completions zsh-syntax-highlighting zsh-autosuggestions "
 # Fonts.
-PKGS+="terminus-font adobe-source-code-pro-fonts adobe-source-sans-fonts "
+PKGS+="terminus-font "
 # Networking tools.
-PKGS+="networkmanager wpa_supplicant network-manager-applet firefox firewalld "
+PKGS+="networkmanager wpa_supplicant network-manager-applet firewalld "
 # Audio.
-# pipewire is installed as dependency of mutter.
+# pipewire is installed as dependency of gdm -> mutter.
 PKGS+="pipewire-pulse pipewire-alsa pipewire-jack "
-# GNOME desktop environment.
-PKGS+="gdm gnome-control-center gnome-shell-extensions gnome-themes-extra "
-PKGS+="gnome-tweaks gnome-terminal wl-clipboard gnome-keyring eog "
+# GNOME desktop environment - base packages.
+PKGS+="gdm gnome-control-center gnome-terminal wl-clipboard gnome-keyring "
 PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
 # File(system) management tools.
-PKGS+="lvm2 exfatprogs nautilus sushi gnome-disk-utility gvfs-mtp "
+PKGS+="lvm2 nautilus sushi "
 ask "Do you want to install proprietary NVIDIA driver [y/N]?"
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   NVIDIA=0
