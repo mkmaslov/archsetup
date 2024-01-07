@@ -30,7 +30,8 @@ sudo pacman -S --needed \
   gnome-shell-extensions gnome-calculator xdg-user-dirs-gtk \
   fwupd gimp vlc firefox adobe-source-code-pro-fonts adobe-source-sans-fonts \
   calibre transmission-gtk exfatprogs guvcview signal-desktop telegram-desktop \
-  torbrowser-launcher qemu-base libvirt virt-manager iptables-nft dnsmasq 
+  torbrowser-launcher qemu-base libvirt virt-manager iptables-nft dnsmasq \
+  dosfstools xorg-xeyes xournalpp pdfarranger
 confirm
 
 # Configure zsh shell (root).
@@ -173,6 +174,7 @@ perl install-tl -profile texlive.profile
 tlmgr update --all
 tlmgr install revtex physics graphics tools\
   latex-bin geometry amsmath underscore dvipng
+# type1cm cm-super
 cd .. && rm -rf ${TEMPDIR}
 confirm
 

@@ -130,7 +130,8 @@ sgdisk -p ${DISK}
 confirm "Do you want to continue the installation"
 
 # Notify kernel about filesystem changes and get partition labels.
-sleep 1 && partprobe ${DISK}
+msg "Updating information about partitions, please wait."
+sleep 5 && partprobe ${DISK} && sleep 5
 EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c7-)"
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
 
