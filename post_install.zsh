@@ -53,7 +53,7 @@ cd yay && makepkg -si --noconfirm && cd .. && cd .. && rm -rf temp
 cprint "Installing software from AUR"
 yes | yay -Syu --answerclean All --answerdiff None --removemake
 yes | yay -S --answerclean All --answerdiff None --removemake\
-  numix-icon-theme-git numix-square-icon-theme forticlient-vpn \
+  numix-icon-theme-git numix-square-icon-theme \
   protonvpn-cli seafile-client gnome-browser-connector vscodium-bin
 # zoom skypeforlinux-stable-bin 
 confirm
@@ -105,7 +105,7 @@ gsettings set org.gnome.gedit.preferences.editor editor-font 'Source Code Pro 14
 gsettings set org.gnome.gedit.plugins.spell highlight-misspelled true
 # Nautilus configuration.
 gsettings set org.gnome.nautilus.preferences show-hidden-files true
-gsettings set org.gnome.nautilus.window-state initial-size (960,960)
+gsettings set org.gnome.nautilus.window-state initial-size "(960,960)"
 
 # Installing GNOME extensions
 cprint "Installing GNOME extensions (ignore errors, choose \"Install\")"
