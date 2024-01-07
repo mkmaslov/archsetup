@@ -35,7 +35,8 @@ sudo pacman -S --needed \
 confirm
 
 # Configure zsh shell (root).
-cprint "Configuring zsh shell for root user. You will be prompted for password."
+cprint "Configuring zsh shell for root user."
+cprint "Please enter ROOT password:"
 su -c "chsh -s /bin/zsh"
 curl "${RES}/root.zshrc" > ".temp_zshrc"
 sudo mv ".temp_zshrc" "/root/.zshrc"

@@ -309,7 +309,7 @@ cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
   fallback_options="-S autodetect --cmdline /etc/kernel/cmdline_fallback"
   fallback_uki="/efi/EFI/Linux/arch-fb.efi"
 EOF
-mkdir /mnt/efi/EFI && mkdir /mnt/efi/EFI/Linux
+mkdir -p /mnt/efi/EFI/Linux
 arch-chroot /mnt mkinitcpio -P
 rm /mnt/efi/initramfs-*.img &>/dev/null || true
 rm /mnt/boot/initramfs-*.img &>/dev/null || true
