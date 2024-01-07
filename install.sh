@@ -160,8 +160,9 @@ MOUNTED=0
 confirm "Do you want to continue the installation"
 
 # Install packages to the / (root) partition.
-pacman -Sy
 msg "Installing packages:"
+pacman-key --refresh-keys &>/dev/null
+pacman -Sy
 PKGS=""
 # Base Arch Linux system.
 PKGS+="base base-devel linux "
