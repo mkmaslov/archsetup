@@ -54,8 +54,8 @@ cprint "Installing software from AUR"
 yes | yay -Syu --answerclean All --answerdiff None --removemake
 yes | yay -S --answerclean All --answerdiff None --removemake\
   numix-icon-theme-git numix-square-icon-theme \
-  protonvpn-cli seafile-client gnome-browser-connector vscodium-bin
-# zoom skypeforlinux-stable-bin 
+  protonvpn-cli seafile-client vscodium-bin
+# zoom skypeforlinux-stable-bin gnome-browser-connector
 confirm
 
 # Configuring GNOME
@@ -119,7 +119,7 @@ do
   /org/gnome/Shell/Extensions org.gnome.Shell.Extensions \
   InstallRemoteExtension s ${EXTENSION} || true
 done
-gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com
+#gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com
 confirm
 
 # Configure nvim text editor (user and root).
@@ -173,9 +173,8 @@ cd install-tl-*
 curl "${RES}/texlive.profile" > "texlive.profile"
 perl install-tl -profile texlive.profile
 tlmgr update --all
-tlmgr install revtex physics graphics tools\
-  latex-bin geometry amsmath underscore dvipng
-# type1cm cm-super
+tlmgr install revtex physics graphics tools latex-bin geometry \
+  amsmath underscore dvipng type1cm cm-super
 cd .. && rm -rf ${TEMPDIR}
 confirm
 

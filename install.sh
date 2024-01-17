@@ -122,7 +122,7 @@ if [ "$WINDOWS" -eq 0 ]; then
 else
   confirm "Deleting all data on ${DISK}. Do you agree"
   wipefs -af ${DISK} &>/dev/null
-  sgdisk ${DISK} -Zo -I -n 1:0:512M -t 1:ef00 -c 1:EFI \
+  sgdisk ${DISK} -Zo -I -n 1:0:4096M -t 1:ef00 -c 1:EFI \
     -n 2:0:0 -t 2:8e00 -c 2:LVM &>/dev/null
 fi
 msg "Current partition table:"

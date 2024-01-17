@@ -28,6 +28,8 @@ This document provides detailed instructions for Arch Linux installation on x86-
 
 *References*: [official Arch Linux installation guide](https://wiki.archlinux.org/title/Installation_guide) and [USB drive creation](https://wiki.archlinux.org/title/USB_flash_installation_medium).
 
+**IMPORTANT! :** The installation medium contains GPG keys from Arch Linux developers. These keys are being renewed from time to time. This means one needs to create a new installation medium before every installation, otherwise `pacstrap` won't work. This can be resolved by running `pacman-keys --refresh-keys`, but it usually takes too long to finish.
+
 List all connected storage devices using `sudo lsblk -d` and choose the drive that will be used as an installation medium (further `/dev/sdX`). Unmount all of the selected drive's partitions and wipe the filesystem:
 ```
 for partition in /dev/sdX?*; do sudo umount -q $partition; done
@@ -166,12 +168,12 @@ The configuration file containing addresses of time servers is stored in `/etc/s
 ## Partitioning disks and configuring full-disk encryption
 
 Use [gdisk](https://wiki.archlinux.org/title/GPT_fdisk) to create GPT partition table with two [partitions](https://wiki.archlinux.org/title/Partitioning): 
-- `512 MiB` EFI-type partition for storing [Unified Kernel Image](#creating-unified-kernel-image)
+- at least `1024 MiB` EFI-type partition for storing [Unified Kernel Image](#creating-unified-kernel-image)
 - LVM-type partition for storing filesystem root and swap partitions
 
 Execute:
 ```
-sgdisk /dev/sdX -Zo -I -n 1:0:512M -t 1:ef00 -c 1:EFI -n 2:0:0 -t 2:8e00 -c 2:LVM
+sgdisk /dev/sdX -Zo -I -n 1:0:4096M -t 1:ef00 -c 1:EFI -n 2:0:0 -t 2:8e00 -c 2:LVM
 ```
 
 

@@ -20,7 +20,7 @@
 						<CreatePartition wcm:action="add">
 							<Order>1</Order>
 							<Type>EFI</Type>
-							<Size>512</Size>
+							<Size>4096</Size>
 						</CreatePartition>
 						<CreatePartition wcm:action="add">
 							<Order>2</Order>
