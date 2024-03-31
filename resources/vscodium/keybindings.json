@@ -1,0 +1,9 @@
+// Place your key bindings in this file to override the defaults
+[
+    {
+        "key": "Ctrl+Enter",
+        "when": "resourceExtname == .tex",
+        "command": "latex-workshop.recipes",
+        "args": "pdflatex -> bibtex -> pdflatex * 2"
+    }
+]

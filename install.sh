@@ -118,6 +118,7 @@ ask "Choose target drive for installation:" "/dev/" && DISK="/dev/${RESPONSE}"
 if [ "$WINDOWS" -eq 0 ]; then
   confirm "Installing Linux alongside Windows on ${DISK}. Do you agree"
   # Windows creates 4 partitions, including EFI.
+  # So Arch Linux only needs one partition that occupies the space left.
   sgdisk ${DISK} -n 5:0:0 -t 5:8e00 -c 5:LVM &>/dev/null
 else
   confirm "Deleting all data on ${DISK}. Do you agree"
@@ -134,6 +135,8 @@ msg "Updating information about partitions, please wait."
 sleep 5 && partprobe ${DISK} && sleep 5
 EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c7-)"
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
+EFI_UUID="/dev/$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep EFI | cut -d \" \" -f1)"
+LVM_UUID="/dev/$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep LVM | cut -d \" \" -f1)"
 
 # Set up LUKS encryption for the LVM partition.
 msg "Setting up full-disk encryption. You will be prompted for a password."
@@ -252,8 +255,16 @@ cat > /mnt/etc/gdm/custom.conf <<EOF
   AutomaticLogin=${USERNAME}
 EOF
 
-# Set up nvim as default editor globally.
-echo "EDITOR=nvim" >> /mnt/etc/environment
+# Set up environment variables.
+cat >> /mnt/etc/environment <<EOF
+  EDITOR=nvim
+  # Choose wayland by default
+  QT_QPA_PLATFORMTHEME="wayland;xcb"
+  ELECTRON_OZONE_PLATFORM_HINT=auto
+EOF
+if [ "$NVIDIA" -eq 0 ]; then
+  echo "GBM_BACKEND=nvidia-drm" >> /mnt/etc/environment
+fi
 
 # Create default directory for PulseAudio. (to avoid journalctl warning)
 mkdir -p /mnt/etc/pulse/default.pa.d
@@ -262,12 +273,13 @@ mkdir -p /mnt/etc/pulse/default.pa.d
 sed -i 's,#ParallelDownloads,ParallelDownloads,g' /mnt/etc/pacman.conf
 
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
-echo "lvm $LVM - luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
+echo "lvm UUID=${LVM_UUID} - \
+luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
 no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
 
 # Configure disk mapping after decryption.
 cat >> /mnt/etc/fstab <<EOF
-  ${EFI}             /efi   vfat    defaults     0       0
+  UUID=${EFI_UUID}   /efi   vfat    defaults     0       0
   ${ROOT}            /      ext4    defaults     0       0
   ${SWAP}            none   swap    defaults     0       0
 EOF
@@ -289,16 +301,16 @@ confirm "Do you want to continue the installation"
 # Create Unified Kernel Image.
 msg "Creating Unified Kernel Image:"
 if [ "$NVIDIA" -eq 0 ]; then
-  echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw quiet \
+  echo "root=${ROOT} resume=${SWAP} cryptdevice=UUID=${LVM_UUID}:main rw quiet \
   nvidia_drm.modeset=1 nvidia_drm.fbdev=1" > /mnt/etc/kernel/cmdline
   echo "options nvidia \
   NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp" > \
   /mnt/etc/modprobe.d/nvidia-power-management.conf
 else
-  echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw quiet" > \
+  echo "root=${ROOT} resume=${SWAP} cryptdevice=UUID=${LVM_UUID}:main rw quiet" > \
   /mnt/etc/kernel/cmdline
 fi
-echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > \
+echo "root=${ROOT} resume=${SWAP} cryptdevice=UUID=${LVM_UUID}:main rw" > \
   /mnt/etc/kernel/cmdline_fallback
 cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
   ALL_config="/etc/mkinitcpio.conf"
@@ -332,9 +344,6 @@ efibootmgr --create --disk ${DISK} --part 1 \
   --label "Arch Linux" --loader "EFI\\Linux\\arch.efi"
 efibootmgr --create --disk ${DISK} --part 1 \
   --label "Arch Linux (fallback)" --loader "EFI\\Linux\\arch-fb.efi"
-
-# Download post-install script.
-curl "${RES}/post_install.zsh" > /mnt/home/${USERNAME}/post_install.zsh
 
 # Finish installation.
 success "** Installation completed successfully! **"
