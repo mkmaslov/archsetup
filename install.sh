@@ -364,9 +364,6 @@ efibootmgr --create --disk ${DISK} --part 1 \
 efibootmgr --create --disk ${DISK} --part 1 \
   --label "Arch Linux (fallback)" --loader "EFI\\Linux\\arch-fb.efi"
 
-# Download post-install script.
-curl "${RES}/post_install.zsh" > /mnt/home/${USERNAME}/post_install.zsh
-
 # Finish installation.
 success "** Installation completed successfully! **"
 msg    "Please set up the desired boot order using:"
