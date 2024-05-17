@@ -11,6 +11,9 @@
 
 set -e
 RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
+SCRIPTS="https://raw.githubusercontent.com/mkmaslov/archsetup/main/scripts"
+TEMPDIR=${HOME}/.post_install
+mkdir ${TEMPDIR}
 
 # Highlight the output.
 YELLOW="\e[1;33m" && COLOR_OFF="\e[0m"
@@ -26,13 +29,21 @@ confirm() {
 cprint "Installing packages:"
 sudo pacman -Syu
 sudo pacman -S --needed \
-  gnome-disk-utility gvfs-mtp gnome-tweaks gnome-themes-extra eog gedit \
+  gnome-disk-utility gvfs-mtp gvfs-gphoto2 gnome-tweaks gnome-themes-extra eog \
   gnome-shell-extensions gnome-calculator xdg-user-dirs-gtk \
   fwupd gimp vlc firefox adobe-source-code-pro-fonts adobe-source-sans-fonts \
   calibre transmission-gtk exfatprogs guvcview signal-desktop telegram-desktop \
   torbrowser-launcher qemu-base libvirt virt-manager iptables-nft dnsmasq \
-  dosfstools xorg-xeyes xournalpp pdfarranger
+  dosfstools xorg-xeyes xournalpp pdfarranger rsync gedit powertop \
+  qt5-wayland qt6-wayland
 confirm
+
+# Packages for virtualization:
+# libvirt virt-manager qemu-base iptables-nft dnsmasq dmidecode qemu-hw-display-qxl
+
+# Enable services.
+systemctl enable --user pipewire-pulse
+systemctl enable --user libvirtd
 
 # Configure zsh shell (root).
 cprint "Configuring zsh shell for root user."
@@ -40,9 +51,6 @@ cprint "Please enter ROOT password:"
 su -c "chsh -s /bin/zsh"
 curl "${RES}/root.zshrc" > ".temp_zshrc"
 sudo mv ".temp_zshrc" "/root/.zshrc"
-
-# Enable pipewire.
-systemctl enable --user pipewire-pulse
 
 # Installing yay AUR helper
 cprint "Installing yay AUR helper"
@@ -134,58 +142,35 @@ sudo mkdir -p /root/.config/nvim
 sudo mv "temp_init.vim" "/root/.config/nvim/init.vim"
 confirm
 
-# Setting up virtual environment for Python
-cprint "Setting up Python virtual environment:"
-PYDIR="${HOME}/.python_venv"
-PIP="${PYDIR}/bin/pip"
-JUPYTER="${PYDIR}/bin/jupyter"
-mkdir ${PYDIR} && mkdir ${PYDIR}/cache
-cat > ${PYDIR}/pip.conf <<EOF
-[global]
-cache-dir=${PYDIR}/cache
-EOF
-python -m venv ${PYDIR}
-${PIP} install --upgrade pip --require-virtualenv
-${PIP} install h5py numpy scipy sympy matplotlib notebook\
-  --require-virtualenv
-# nbextensions don't work with notebook 7.0
-#${PIP} install h5py numpy scipy sympy matplotlib notebook\
-#  jupyter_contrib_nbextensions jupyter_nbextensions_configurator\
-#  --require-virtualenv
-#${JUPYTER} contrib nbextension install --sys-prefix
-#${JUPYTER} nbextensions_configurator enable --sys-prefix
-mkdir "${PYDIR}/etc/jupyter/custom"
-curl "${RES}/custom.css" > "${PYDIR}/etc/jupyter/custom/custom.css"
-# They changed location.
-#curl "${RES}/notebook.json" > "${PYDIR}/etc/jupyter/nbconfig/notebook.json"
-confirm
-
 # Configure git to use keyring
 git config --global credential.helper libsecret
 
-# Minimal TeXLive installation
-TEMPDIR="${HOME}/.tex_install_temp"
-mkdir ${TEMPDIR} && cd ${TEMPDIR}
-curl -LO https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
-tar -xvzf install-tl-unx.tar.gz
-rm install-tl-unx.tar.gz
-cd install-tl-*
-curl "${RES}/texlive.profile" > "texlive.profile"
-perl install-tl -profile texlive.profile
-tlmgr update --all
-tlmgr install revtex physics graphics tools latex-bin geometry \
-  amsmath underscore dvipng type1cm cm-super
-cd .. && rm -rf ${TEMPDIR}
-confirm
+# Install Python and JupyterLab.
+curl "${SCRIPTS}/install_python.sh" > "${TEMPDIR}/install_python.sh"
+bash ${TEMPDIR}/install_python.sh
+
+# Install TeX Live.
+curl "${SCRIPTS}/install_tex.sh" > "${TEMPDIR}/install_tex.sh"
+bash ${TEMPDIR}/install_tex.sh
+
+# Install Julia.
+curl "${SCRIPTS}/install_julia.sh" > "${TEMPDIR}/install_julia.sh"
+bash ${TEMPDIR}/install_julia.sh
+
+# Configure VScodium
+# ${HOME}/.config/VSCodium/User/settings.json
 
 # Install LaTex extension for Inkscape.
 sudo pacman -S --needed inkscape gtksourceview3
-TEMPDIR="${HOME}/.textext_temp"
-mkdir ${TEMPDIR} && cd ${TEMPDIR}
+cd ${TEMPDIR}
 curl -LO https://github.com/textext/textext/releases/download/1.10.0/TexText-Linux-1.10.0.tar.gz
 tar -xvzf TexText-Linux-1.10.0.tar.gz
 cd textext-*
 python3 setup.py
 echo -E "\usepackage{physics,bm}" >> \
   "${HOME}/.config/inkscape/extensions/textext/default_packages.tex"
-cd .. && cd .. && rm -rf ${TEMPDIR}
+cd .. && cd ..
+
+rm -rf ${TEMPDIR}
+
+cprint "Post-installation finished."

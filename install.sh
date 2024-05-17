@@ -2,12 +2,15 @@
  
 set -e
 
+# -----------------------------------------------------------------------------
 # This script performs basic Arch Linux installation.
+# 
+# There are three installation types (details below):
+# Arch Linux as a single OS, dual boot with Windows, and headless server setup.
+# -----------------------------------------------------------------------------
 
-# It enables luks encryption and configures Wayland display server,
-# GNOME desktop environment and Unified Kernel Image for UEFI Secure Boot.
-
-RES="https://raw.githubusercontent.com/mkmaslov/archsetup/main"
+# GitHub repository containing required dotfiles.
+RESOURCES="https://raw.githubusercontent.com/mkmaslov/archsetup/main"
 
 # Highlight the output.
 YELLOW="\e[1;33m" && RED="\e[1;31m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
@@ -20,7 +23,7 @@ success() { cprint ${GREEN} "${1}\n"; }
 # Prompt for a response.
 ask () { status "$1 " && echo -ne "$2" && read RESPONSE; }
 
-# Confirm whether a vital requirement for continuing installation is fulfilled.
+# Confirm whether certain requirement for continuing installation is fulfilled.
 # If not and the disks are already mounted - unmount and encrypt the drives.
 confirm() { 
   ask "${1} [Y/n]?"
@@ -43,15 +46,18 @@ confirm() {
 loadkeys us && setfont ter-132b && clear
 
 # Choose instalaltion type.
-msg "** ARCH LINUX INSTALLATION **"
-msg "Installation types:"
-msg    "Option #1: Arch Linux for PC (single OS)"
-cprint "           [Unified Kernel Image, luks encryption, wayland, GNOME]\n"
-msg    "Option #2: Arch Linux for PC (dual-boot)"
-cprint "           [same as #1, but leaves space for Windows partition]\n"
-msg    "Option #3: Arch Linux for server."
-cprint "           [same as #1, but does not include GUI applications]\n"
-ask "Choose installation type:" "Option #"
+msg    "** ARCH LINUX INSTALLATION **"
+msg    "Available installation types:"
+msg    "[1]: Arch Linux as a single OS, includes:"
+cprint "     - Secure Boot, Unified Kernel Image, luks encryption\n"
+cprint "     - Wayland display server, GNOME desktop environment\n"
+msg    "[2]: Arch Linux alongside Windows. Same as [1], but:"
+cprint "     - does not erase the disk, preserving Windows partitions\n"
+cprint "     - uses EFI boot partition created by Windows\n"
+cprint "       (WARNING! This may cause problems due to Windows Update!)\n"
+msg    "[3]: Arch Linux as a single OS for a headless server."
+cprint "     - This option is not implemented yet."
+ask "Choose installation type [1,2,3]:" "" && clear
 WINDOWS=1 && SERVER=1 && MOUNTED=1 && NVIDIA=1
 case $RESPONSE in
   "2") WINDOWS=0 ;;
@@ -59,14 +65,20 @@ case $RESPONSE in
 esac
 
 # Check whether Secure Boot is disabled.
-msg "\nFull Secure Boot reset is recommended before using this script. In BIOS:"
-msg "delete all SB keys, restore factory SB keys, then reset SB to Setup Mode."
-msg "Verifying Secure Boot status. Should return: disabled (setup)."
+msg "Full Secure Boot reset is recommended before using this script."
+cprint "To perform the reset:\n"
+cprint "- Enter BIOS firmware (by pressing F1/F2/Esc/Enter/Del at boot)\n"
+cprint "- Navigate to the \"Security\" settings tab\n"
+cprint "- Delete/Clear all Secure Boot keys\n"
+cprint "- Restore factory default Secure Boot keys\n"
+cprint "- Reset Secure Boot to \"Setup Mode\"\n"
+cprint "- Disable Secure Boot\n"
+msg "Verifying Secure Boot status. The output should contain: disabled (setup)."
 bootctl --quiet status | grep "Secure Boot:"
 confirm "Did you reset and disable Secure Boot"
 
 # Test Internet connection.
-status "Testing Internet connection:"
+status "Testing Internet connection (takes few seconds):"
 ping -w 5 archlinux.org &>/dev/null
 NREACHED=${?}
 if [ ${NREACHED} -ne 0 ]; then
@@ -118,6 +130,7 @@ ask "Choose target drive for installation:" "/dev/" && DISK="/dev/${RESPONSE}"
 if [ "$WINDOWS" -eq 0 ]; then
   confirm "Installing Linux alongside Windows on ${DISK}. Do you agree"
   # Windows creates 4 partitions, including EFI.
+  # So Arch Linux only needs one partition that occupies the space left.
   sgdisk ${DISK} -n 5:0:0 -t 5:8e00 -c 5:LVM &>/dev/null
 else
   confirm "Deleting all data on ${DISK}. Do you agree"
@@ -134,6 +147,8 @@ msg "Updating information about partitions, please wait."
 sleep 5 && partprobe ${DISK} && sleep 5
 EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c7-)"
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
+EFI_UUID="/dev/$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep EFI | cut -d \" \" -f1)"
+LVM_UUID="/dev/$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep LVM | cut -d \" \" -f1)"
 
 # Set up LUKS encryption for the LVM partition.
 msg "Setting up full-disk encryption. You will be prompted for a password."
@@ -170,6 +185,8 @@ PKGS+="base base-devel linux "
 PKGS+="linux-firmware sof-firmware alsa-firmware ${MICROCODE} "
 # UEFI and Secure Boot tools.
 PKGS+="efibootmgr sbctl "
+# AppArmor (Mandatory Access Control system)
+PKGS+="apparmor "
 # Documentation.
 PKGS+="man-db man-pages texinfo "
 # CLI tools.
@@ -196,6 +213,7 @@ pacstrap -K /mnt ${PKGS}
 confirm "Do you want to continue the installation"
 
 # Enable daemons.
+systemctl enable apparmor.service --root=/mnt &>/dev/null
 systemctl enable bluetooth --root=/mnt &>/dev/null
 systemctl enable NetworkManager --root=/mnt &>/dev/null
 systemctl enable firewalld.service --root=/mnt &>/dev/null
@@ -252,8 +270,16 @@ cat > /mnt/etc/gdm/custom.conf <<EOF
   AutomaticLogin=${USERNAME}
 EOF
 
-# Set up nvim as default editor globally.
-echo "EDITOR=nvim" >> /mnt/etc/environment
+# Set up environment variables.
+cat >> /mnt/etc/environment <<EOF
+  EDITOR=nvim
+  # Choose wayland by default
+  QT_QPA_PLATFORMTHEME="wayland;xcb"
+  ELECTRON_OZONE_PLATFORM_HINT=auto
+EOF
+if [ "$NVIDIA" -eq 0 ]; then
+  echo "GBM_BACKEND=nvidia-drm" >> /mnt/etc/environment
+fi
 
 # Create default directory for PulseAudio. (to avoid journalctl warning)
 mkdir -p /mnt/etc/pulse/default.pa.d
@@ -262,12 +288,13 @@ mkdir -p /mnt/etc/pulse/default.pa.d
 sed -i 's,#ParallelDownloads,ParallelDownloads,g' /mnt/etc/pacman.conf
 
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
-echo "lvm $LVM - luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
+echo "lvm UUID=${LVM_UUID} - \
+luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
 no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
 
 # Configure disk mapping after decryption.
 cat >> /mnt/etc/fstab <<EOF
-  ${EFI}             /efi   vfat    defaults     0       0
+  UUID=${EFI_UUID}   /efi   vfat    defaults     0       0
   ${ROOT}            /      ext4    defaults     0       0
   ${SWAP}            none   swap    defaults     0       0
 EOF
@@ -288,18 +315,21 @@ confirm "Do you want to continue the installation"
 
 # Create Unified Kernel Image.
 msg "Creating Unified Kernel Image:"
+# Kernel parameters: disk mapping
+CMDLINE="root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw "
+# Fallback image should contain minimal amount of kernel parameters
+echo ${CMDLINE} > /mnt/etc/kernel/cmdline_fallback
+# Kernel parameters: security
+CMDLINE+="lsm=landlock,lockdown,yama,integrity,apparmor,bpf "
+# Kernel parameters: NVIDIA drivers
 if [ "$NVIDIA" -eq 0 ]; then
-  echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw quiet \
-  nvidia_drm.modeset=1 nvidia_drm.fbdev=1" > /mnt/etc/kernel/cmdline
+  CMDLINE+="nvidia_drm.modeset=1 nvidia_drm.fbdev=1"
   echo "options nvidia \
   NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp" > \
   /mnt/etc/modprobe.d/nvidia-power-management.conf
-else
-  echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw quiet" > \
-  /mnt/etc/kernel/cmdline
 fi
-echo "root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw" > \
-  /mnt/etc/kernel/cmdline_fallback
+echo ${CMDLINE} > /mnt/etc/kernel/cmdline
+# creating preset
 cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
   ALL_config="/etc/mkinitcpio.conf"
   ALL_kver="/boot/vmlinuz-linux"
@@ -316,7 +346,8 @@ rm /mnt/boot/initramfs-*.img &>/dev/null || true
 confirm "Do you want to continue the installation"
 
 # Configure Secure Boot.
-#chattr -i /sys/firmware/efi/efivars/{KEK,db}* || true
+# In certain cases, the following command is required before enrolling keys:
+# chattr -i /sys/firmware/efi/efivars/{KEK,db}* || true
 msg "Configuring Secure Boot:"
 arch-chroot /mnt /bin/bash -e <<EOF
   sbctl create-keys
