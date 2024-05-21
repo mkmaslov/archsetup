@@ -29,7 +29,7 @@ mkdir archinstall_cache && cd archinstall_cache
 # Download Arch Linux image and its GPG signature.
 msg "Downloading the latest Arch Linux image and its GPG signature:"
 # kurl() function copied from: https://stackoverflow.com/a/66504482
-kurl(){ F=${1##*/} ; printf "%32s[%s]" "" "${F}" ; COLUMNS=28 curl -# ${1} -o ${F}; }
+kurl(){ F=${1##*/} ; printf "%32s[%s]" "" "${F}" ; COLUMNS=28 curl -# ${1} -o ${F} ; }
 # Check whether wget or curl are available, if not - return error.
 download() {
   if [ -x "$(command -v wget)" ]; then

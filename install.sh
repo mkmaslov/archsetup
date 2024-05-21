@@ -9,7 +9,7 @@ set -e
 # Arch Linux as a single OS, dual boot with Windows, and headless server setup.
 # -----------------------------------------------------------------------------
 
-# GitHub repository containing required dotfiles.
+# GitHub repository containing necessary dotfiles.
 RESOURCES="https://raw.githubusercontent.com/mkmaslov/archsetup/main"
 
 # Highlight the output.
@@ -23,12 +23,12 @@ success() { cprint ${GREEN} "${1}\n"; }
 # Prompt for a response.
 ask () { status "$1 " && echo -ne "$2" && read RESPONSE; }
 
-# Confirm whether certain requirement for continuing installation is fulfilled.
+# Confirm whether a certain requirement for continuing installation is fulfilled.
 # If not and the disks are already mounted - unmount and encrypt the drives.
 confirm() { 
   ask "${1} [Y/n]?"
   if [[ ${RESPONSE} =~ ^(no|n|N|NO|No)$ ]]; then
-    msg "Cancelling installation."
+    error "Cancelling installation."
     if [ "$MOUNTED" -eq 0 ]; then
       umount ${EFI}
       umount ${ROOT}
@@ -42,23 +42,28 @@ confirm() {
   fi
 }
 
-# Reset terminal window.
-loadkeys us && setfont ter-132b && clear
+# -----------------------------------------------------------------------------
+# Initial checks.
+# -----------------------------------------------------------------------------
 
-# Choose instalaltion type.
+# Reset terminal window.
+loadkeys us ; setfont ter-132b ; clear
+
+# Choose installation type.
 msg    "** ARCH LINUX INSTALLATION **"
 msg    "Available installation types:"
 msg    "[1]: Arch Linux as a single OS, includes:"
 cprint "     - Secure Boot, Unified Kernel Image, luks encryption\n"
 cprint "     - Wayland display server, GNOME desktop environment\n"
+cprint "     - AppArmor+audit (MAC), nftables (firewall), firejail (sandboxing)\n"
 msg    "[2]: Arch Linux alongside Windows. Same as [1], but:"
 cprint "     - does not erase the disk, preserving Windows partitions\n"
 cprint "     - uses EFI boot partition created by Windows\n"
-cprint "       (WARNING! This may cause problems due to Windows Update!)\n"
-msg    "[3]: Arch Linux as a single OS for a headless server."
+error  "       (WARNING! Windows Update may prevent Linux from booting!)\n"
+msg    "[3]: Arch Linux as a single OS on a headless server."
 cprint "     - This option is not implemented yet."
-ask "Choose installation type [1,2,3]:" "" && clear
-WINDOWS=1 && SERVER=1 && MOUNTED=1 && NVIDIA=1
+ask "Choose installation type [1,2,3]:" "" ; clear
+WINDOWS=1 ; SERVER=1 ; MOUNTED=1 ; NVIDIA=1
 case $RESPONSE in
   "2") WINDOWS=0 ;;
   "3") SERVER=0 ;;
@@ -78,17 +83,17 @@ bootctl --quiet status | grep "Secure Boot:"
 confirm "Did you reset and disable Secure Boot"
 
 # Test Internet connection.
-status "Testing Internet connection (takes few seconds):"
+status "Testing Internet connection (takes few seconds): "
 ping -w 5 archlinux.org &>/dev/null
 NREACHED=${?}
 if [ ${NREACHED} -ne 0 ]; then
-  error "failed."
-  status "Before proceeding with the installation,"
-  msg    "please make sure you have a functional Internet connection."
-  msg    "To connect to a WiFi network, use: "
-  cprint " >> iwctl station wlan0 connect <ESSID>.\n"
-  msg    "To manually test the Internet connection, use: "
-  cprint " >> ping archlinux.org.\n"
+  error  "failed."
+  cprint "Before proceeding with the installation, "
+  cprint "please make sure you have a functional Internet connection.\n"
+  cprint "To connect to a WiFi network, use:\n"
+  cprint ">>  iwctl station wlan0 connect <ESSID>.\n"
+  cprint "To manually test the Internet connection, use: "
+  cprint ">>  ping archlinux.org.\n"
   exit
 else
   success "success."
@@ -99,9 +104,9 @@ fi
 status "Checking UEFI boot mode: "
 COUNT=$(ls /sys/firmware/efi/efivars | grep -c '.')
 if [ ${COUNT} -eq 0 ]; then
-  error "failed."
-  status "Before proceeding with the installation,"
-  status "please make sure the system is booted in UEFI mode."
+  error  "failed."
+  cprint "Before proceeding with the installation, "
+  cprint "please make sure the system is booted in UEFI mode."
   msg    "This setting can be configured in BIOS."
   exit
 else
@@ -121,16 +126,20 @@ else
   MICROCODE=intel-ucode
 fi
 
-# Choose a target drive.
-msg "List of the attached storage devices:"
+# -----------------------------------------------------------------------------
+# Disk configuration.
+# -----------------------------------------------------------------------------
+
+# Choose the target drive.
+msg "List of attached storage devices:"
 lsblk -ado PATH,SIZE
 ask "Choose target drive for installation:" "/dev/" && DISK="/dev/${RESPONSE}"
 
 # Partition target drive.
 if [ "$WINDOWS" -eq 0 ]; then
   confirm "Installing Linux alongside Windows on ${DISK}. Do you agree"
-  # Windows creates 4 partitions, including EFI.
-  # So Arch Linux only needs one partition that occupies the space left.
+  # Windows creates 4 partitions, including EFI boot partition.
+  # Hence, Arch Linux only needs one partition that takes all free disk space.
   sgdisk ${DISK} -n 5:0:0 -t 5:8e00 -c 5:LVM &>/dev/null
 else
   confirm "Deleting all data on ${DISK}. Do you agree"
@@ -147,8 +156,8 @@ msg "Updating information about partitions, please wait."
 sleep 5 && partprobe ${DISK} && sleep 5
 EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c7-)"
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
-EFI_UUID="/dev/$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep EFI | cut -d \" \" -f1)"
-LVM_UUID="/dev/$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep LVM | cut -d \" \" -f1)"
+EFI_UUID="$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep EFI | cut -d \" \" -f1)"
+LVM_UUID="$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep LVM | cut -d \" \" -f1)"
 
 # Set up LUKS encryption for the LVM partition.
 msg "Setting up full-disk encryption. You will be prompted for a password."
@@ -160,11 +169,13 @@ cryptsetup open --type luks ${LVM} lvm
 
 # Create LVM volumes, format and mount partitions.
 MAPLVM="/dev/mapper/lvm"
-SWAP="/dev/mapper/main-swap"
-ROOT="/dev/mapper/main-root"
 pvcreate ${MAPLVM} && vgcreate main ${MAPLVM}
 lvcreate -L18G main -n swap
 lvcreate -l 100%FREE main -n root
+SWAP="/dev/mapper/main-swap"
+SWAP_UUID="$(lsblk ${DISK} -o UUID,NAME | grep "main-swap" | cut -d " " -f1)"
+ROOT="/dev/mapper/main-root"
+ROOT_UUID="$(lsblk ${DISK} -o UUID,NAME | grep "main-root" | cut -d " " -f1)"
 [ "$WINDOWS" -eq 1 ] && mkfs.fat -F 32 ${EFI} &>/dev/null
 mkfs.ext4 ${ROOT} &>/dev/null
 mkswap ${SWAP} && swapon ${SWAP}
@@ -174,10 +185,18 @@ mount ${EFI} /mnt/efi
 MOUNTED=0
 confirm "Do you want to continue the installation"
 
+# -----------------------------------------------------------------------------
+# Package installation.
+# -----------------------------------------------------------------------------
+
 # Install packages to the / (root) partition.
 msg "Installing packages:"
-#pacman-key --refresh-keys &>/dev/null
+# If the USB installation medium is old, one needs to update pacman keys:
+# (this operation takes a long time and is therefore disabled by default)
+# pacman-key --refresh-keys &>/dev/null
+# Update pacman cache.
 pacman -Sy
+# Create a list of packages.
 PKGS=""
 # Base Arch Linux system.
 PKGS+="base base-devel linux "
@@ -185,17 +204,19 @@ PKGS+="base base-devel linux "
 PKGS+="linux-firmware sof-firmware alsa-firmware ${MICROCODE} "
 # UEFI and Secure Boot tools.
 PKGS+="efibootmgr sbctl "
-# AppArmor (Mandatory Access Control system)
-PKGS+="apparmor "
+# AppArmor (Mandatory Access Control system) and Audit framework
+PKGS+="apparmor audit "
+# Application sandboxing.
+PKGS+="firejail firetools "
 # Documentation.
 PKGS+="man-db man-pages texinfo "
 # CLI tools.
-PKGS+="tmux neovim nano btop git go "
+PKGS+="tmux neovim nano btop git go jq "
 PKGS+="zsh zsh-completions zsh-syntax-highlighting zsh-autosuggestions "
 # Fonts.
 PKGS+="terminus-font "
 # Networking tools.
-PKGS+="networkmanager wpa_supplicant network-manager-applet firewalld "
+PKGS+="networkmanager wpa_supplicant network-manager-applet "
 # Audio.
 # pipewire is installed as dependency of gdm -> mutter.
 PKGS+="pipewire-pulse pipewire-alsa pipewire-jack "
@@ -204,16 +225,18 @@ PKGS+="gdm gnome-control-center gnome-terminal wl-clipboard gnome-keyring "
 PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
 # File(system) management tools.
 PKGS+="lvm2 nautilus sushi "
-ask "Do you want to install proprietary NVIDIA driver [y/N]?"
+ask "Do you want to install the proprietary NVIDIA driver [y/N]?"
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   NVIDIA=0
   PKGS+="nvidia "
 fi
+# Install packages.
 pacstrap -K /mnt ${PKGS}
 confirm "Do you want to continue the installation"
 
 # Enable daemons.
 systemctl enable apparmor.service --root=/mnt &>/dev/null
+systemctl enable auditd.service --root=/mnt &>/dev/null
 systemctl enable bluetooth --root=/mnt &>/dev/null
 systemctl enable NetworkManager --root=/mnt &>/dev/null
 systemctl enable firewalld.service --root=/mnt &>/dev/null
@@ -232,6 +255,10 @@ systemctl mask geoclue.service --root=/mnt &>/dev/null
 systemctl mask org.gnome.SettingsDaemon.UsbProtection.service --root=/mnt &>/dev/null
 systemctl mask org.gnome.SettingsDaemon.Wacom.service --root=/mnt &>/dev/null
 systemctl mask org.gnome.SettingsDaemon.Smartcard.service --root=/mnt &>/dev/null
+
+# -----------------------------------------------------------------------------
+# User configuration.
+# -----------------------------------------------------------------------------
 
 # Set hostname.
 ask "Choose a hostname:" && HOSTNAME="${RESPONSE}"
@@ -287,6 +314,13 @@ mkdir -p /mnt/etc/pulse/default.pa.d
 # Enable parallel downloads in pacman.
 sed -i 's,#ParallelDownloads,ParallelDownloads,g' /mnt/etc/pacman.conf
 
+# Enable AppArmor rules cashing.
+sed -i 's,#write-cache,write-cache,g' /mnt/etc/apparmor/parser.conf
+
+# -----------------------------------------------------------------------------
+# Unified Kernel Image configuration.
+# -----------------------------------------------------------------------------
+
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
 echo "lvm UUID=${LVM_UUID} - \
 luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
@@ -294,9 +328,9 @@ no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
 
 # Configure disk mapping after decryption.
 cat >> /mnt/etc/fstab <<EOF
-  UUID=${EFI_UUID}   /efi   vfat    defaults     0       0
-  ${ROOT}            /      ext4    defaults     0       0
-  ${SWAP}            none   swap    defaults     0       0
+  UUID=${EFI_UUID}    /efi   vfat    defaults     0       0
+  UUID=${ROOT_UUID}   /      ext4    defaults     0       0
+  UUID=${SWAP_UUID}   none   swap    defaults     0       0
 EOF
 
 # Change mkinitcpio hooks. (do NOT add spaces/tabs)
@@ -316,11 +350,12 @@ confirm "Do you want to continue the installation"
 # Create Unified Kernel Image.
 msg "Creating Unified Kernel Image:"
 # Kernel parameters: disk mapping
-CMDLINE="root=${ROOT} resume=${SWAP} cryptdevice=${LVM}:main rw "
-# Fallback image should contain minimal amount of kernel parameters
+CMDLINE="root=UUID=${ROOT_UUID} resume=UUID=${SWAP_UUID} "
+CMDLINE+="cryptdevice=UUID=${LVM_UUID}:main rw "
+# Fallback image should contain minimal amount of kernel parameters.
 echo ${CMDLINE} > /mnt/etc/kernel/cmdline_fallback
 # Kernel parameters: security
-CMDLINE+="lsm=landlock,lockdown,yama,integrity,apparmor,bpf "
+CMDLINE+="lsm=landlock,lockdown,yama,integrity,apparmor,bpf audit=1 "
 # Kernel parameters: NVIDIA drivers
 if [ "$NVIDIA" -eq 0 ]; then
   CMDLINE+="nvidia_drm.modeset=1 nvidia_drm.fbdev=1"
@@ -345,31 +380,37 @@ rm /mnt/efi/initramfs-*.img &>/dev/null || true
 rm /mnt/boot/initramfs-*.img &>/dev/null || true
 confirm "Do you want to continue the installation"
 
+# -----------------------------------------------------------------------------
+# Bootloader configuration.
+# -----------------------------------------------------------------------------
+
 # Configure Secure Boot.
-# In certain cases, the following command is required before enrolling keys:
-# chattr -i /sys/firmware/efi/efivars/{KEK,db}* || true
 msg "Configuring Secure Boot:"
+# In some cases, the following command is required before enrolling keys:
+# chattr -i /sys/firmware/efi/efivars/{KEK,db}* || true
 arch-chroot /mnt /bin/bash -e <<EOF
   sbctl create-keys
   sbctl enroll-keys --microsoft
-  sbctl sign --save /efi/EFI/Linux/arch.efi
-  sbctl sign --save /efi/EFI/Linux/arch-fb.efi
+  sbctl sign --save /efi/EFI/Linux/arch-linux.efi
+  sbctl sign --save /efi/EFI/Linux/arch-linux-fallback.efi
 EOF
 confirm "Do you want to continue the installation"
 
-# Add UEFI boot entries.
-msg "Adding UEFI boot entries:"
+# Create UEFI boot entries.
+msg "Creating UEFI boot entries:"
 efibootmgr --create --disk ${DISK} --part 1 \
-  --label "Arch Linux" --loader "EFI\\Linux\\arch.efi"
+  --label "Arch Linux" --loader "EFI\\Linux\\arch-linux.efi"
 efibootmgr --create --disk ${DISK} --part 1 \
-  --label "Arch Linux (fallback)" --loader "EFI\\Linux\\arch-fb.efi"
+  --label "Arch Linux (fallback)" --loader "EFI\\Linux\\arch-linux-fallback.efi"
+success "UEFI boot entries successfully created!"
 
 # Finish installation.
-success "** Installation completed successfully! **"
-msg    "Please set up the desired boot order using:"
-cprint " >> efibootmgr --bootorder XXXX,YYYY,...\n"
-msg    "To remove unused boot entries, use:"
-cprint " >> efibootmgr -b XXXX --delete-bootnum\n"
-msg    "After finishing UEFI configuration, reboot into BIOS using:"
-cprint " >> systemctl reboot --firmware-setup\n"
-msg    "Inside the BIOS, enable Secure Boot and Boot Order Lock (if present)."
+clear ; success "** Arch Linux installation completed successfully! **"
+cprint  "Please set up the desired boot order using:"
+cprint  ">>  efibootmgr --bootorder XXXX,YYYY,...\n"
+cprint  "To remove unused boot entries, use:"
+cprint  ">>  efibootmgr -b XXXX --delete-bootnum\n"
+cprint  "After finishing UEFI configuration, reboot into BIOS using:"
+cprint  ">>  systemctl reboot --firmware-setup\n"
+cprint  "Inside the BIOS, enable Secure Boot and Boot Order Lock (if present)."
+# -----------------------------------------------------------------------------
