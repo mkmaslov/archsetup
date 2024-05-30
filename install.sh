@@ -133,8 +133,8 @@ msg "Updating information about partitions, please wait."
 sleep 5 ; partprobe ${DISK} ; sleep 5
 EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c7-)"
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
-EFI_UUID="$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep EFI | cut -d \" \" -f1)"
-LVM_UUID="$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep LVM | cut -d \" \" -f1)"
+EFI_UUID="$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep EFI | cut -d " " -f1)"
+LVM_UUID="$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep LVM | cut -d " " -f1)"
 
 # Set up LUKS encryption for the LVM partition.
 msg "Setting up full-disk encryption. You will be prompted for a password."
@@ -150,9 +150,9 @@ pvcreate ${MAPLVM} && vgcreate main ${MAPLVM}
 lvcreate -L18G main -n swap
 lvcreate -l 100%FREE main -n root
 SWAP="/dev/mapper/main-swap"
-SWAP_UUID="$(lsblk ${DISK} -o UUID,NAME | grep "main-swap" | cut -d " " -f1)"
+SWAP_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-swap | cut -d " " -f1)"
 ROOT="/dev/mapper/main-root"
-ROOT_UUID="$(lsblk ${DISK} -o UUID,NAME | grep "main-root" | cut -d " " -f1)"
+ROOT_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-root | cut -d " " -f1)"
 [ "$WINDOWS" -eq 1 ] && mkfs.fat -F 32 ${EFI} &>/dev/null
 mkfs.ext4 ${ROOT} &>/dev/null
 mkswap ${SWAP} && swapon ${SWAP}
