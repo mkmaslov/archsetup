@@ -32,31 +32,67 @@ gsettings set org.gnome.desktop.privacy remove-old-trash-files true
 gsettings set org.gnome.desktop.privacy remember-recent-files false
 gsettings set org.gnome.desktop.privacy remember-app-usage false
 gsettings set org.gnome.desktop.privacy old-files-age 30
-gsettings set \
-  org.gnome.settings-daemon.plugins.power power-button-action 'suspend'
-gsettings set \
-  org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
-gsettings set \
-  org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 900
-gsettings set \
-  org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'suspend'
-gsettings set \
-  org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 900
+# Keyboard layout.
+gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us+intl'), ('xkb', 'ru')]"
+# Plugins
+gsettings set org.gnome.settings-daemon.plugins.power power-button-action 'suspend'
+gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
+gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 900
+gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'suspend'
+gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 900
+## look into power setings!!
 gsettings set org.gnome.settings-daemon.plugins.power idle-dim true
-gsettings set \
-  org.gnome.settings-daemon.plugins.power idle-brightness 30
+gsettings set org.gnome.settings-daemon.plugins.power idle-brightness 30
+gsettings set org.gnome.settings-daemon.plugins.color night-light-enabled true
+gsettings set org.gnome.settings-daemon.plugins.color night-light-schedule-automatic false
+gsettings set org.gnome.settings-daemon.plugins.color night-light-schedule-from 22
+gsettings set org.gnome.settings-daemon.plugins.color night-light-schedule-to 7
+gsettings set org.gnome.settings-daemon.plugins.color night-light-temperature 3200
+
+gsettings set org.gnome.desktop.peripherals.keyboard numlock-state true
+gsettings set org.gnome.gnome-session logout-prompt false
+gsettings set org.gnome.login-screen enable-fingerprint-authentication false
+gsettings set org.gnome.login-screen enable-smartcard-authentication false
+# GNOME File Chooser configuration.
+gsettings set org.gtk.settings.file-chooser show-hidden true
+gsettings set org.gtk.settings.file-chooser sort-directories-first true
+gsettings set org.gtk.settings.file-chooser show-type-column false
+gsettings set org.gtk.settings.file-chooser date-format 'with-time'
+gsettings set org.gtk.settings.file-chooser window-size "(960,960)"
+gsettings set org.gtk.gtk4.settings.file-chooser show-hidden true
+gsettings set org.gtk.gtk4.settings.file-chooser sort-directories-first true
+gsettings set org.gtk.gtk4.settings.file-chooser show-type-column false
+gsettings set org.gtk.gtk4.settings.file-chooser date-format 'with-time'
+gsettings set org.gtk.gtk4.settings.file-chooser window-size "(960,960)"
 # Gedit configuration.
 gsettings set org.gnome.gedit.preferences.editor scheme 'oblivion'
 gsettings set org.gnome.gedit.preferences.editor use-default-font false
 gsettings set org.gnome.gedit.preferences.editor tabs-size 4
 gsettings set org.gnome.gedit.preferences.editor syntax-highlighting true
+gsettings set org.gnome.gedit.preferences.editor display-line-numbers true
+gsettings set org.gnome.gedit.preferences.editor highlight-current-line false
 gsettings set org.gnome.gedit.preferences.editor display-right-margin true
 gsettings set org.gnome.gedit.preferences.editor right-margin-position 80
 gsettings set org.gnome.gedit.preferences.editor editor-font 'Source Code Pro 14'
+gsettings set org.gnome.gedit.preferences.ui.theme-variant open-recent true
 gsettings set org.gnome.gedit.plugins.spell highlight-misspelled true
+gsettings set org.gnome.gedit.state.file-chooser open-recent true
 # Nautilus configuration.
 gsettings set org.gnome.nautilus.preferences show-hidden-files true
+gsettings set org.gnome.nautilus.preferences open-folder-on-dnd-hover false
+gsettings set org.gnome.nautilus.preferences mouse-use-extra-buttons false
+gsettings set org.gnome.nautilus.preferences date-time-format 'detailed'
 gsettings set org.gnome.nautilus.window-state initial-size "(960,960)"
+gsettings set org.gnome.nautilus.icon-view default-zoom-level 'medium'
+# Eye of GNOME
+gsettings set org.gnome.eog.ui image-gallery true
+gsettings set org.gnome.eog.ui statusbar true
+gsettings set org.gnome.eog.ui image-gallery-position 'left'
+# Location
+gsettings set org.gnome.system.location enabled false
+gsettings set org.gnome.eog.ui max-accuracy-level 'country'
+
+# To-do: terminal, desktop
 
 
 # Installing GNOME extensions.

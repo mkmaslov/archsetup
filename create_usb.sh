@@ -3,7 +3,7 @@
 set -e
 
 # -----------------------------------------------------------------------------
-# This script creates bootable USB drive using the latest Arch Linux image.
+# This script creates a bootable USB drive using the latest Arch Linux image.
 # -----------------------------------------------------------------------------
 
 # Output formatting.
@@ -18,10 +18,12 @@ error() { cprint "${RED}" "ERROR: ${1}\n" ; }
 ask () { cprint "${YELLOW}" "${1} " ; echo -ne "${2}" ; read RESPONSE ; }
 
 # -----------------------------------------------------------------------------
+# Downloading and verifying image.
+# -----------------------------------------------------------------------------
 
 msg "Creating Arch Linux USB installation medium."
 
-# Clear cache directory if exists.
+# Clear cache directory if it exists.
 rm -rf archinstall_cache &> /dev/null
 # Create cache directory.
 mkdir archinstall_cache && cd archinstall_cache
@@ -41,6 +43,8 @@ download() {
     exit
   fi
 }
+# Using download mirror for Austria.
+# Mirrors for other countries: https://archlinux.org/download/
 IMAGE="http://mirror.easyname.at/archlinux/iso/latest/archlinux-x86_64.iso"
 download "${IMAGE}.sig" "${IMAGE}"
 
@@ -55,15 +59,19 @@ PGPKEY=$(curl --silent https://archlinux.org/download/ | \
 echo "Primary key fingerprint: ${PGPKEY::-1}"
 ask "Do you confirm that the GPG signature is correct [y/N]?"
 
+# -----------------------------------------------------------------------------
+# Writing image to disk.
+# -----------------------------------------------------------------------------
+
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   # Scan hardware for storage devices.
   msg "Available storage devices:"
-  lsblk -ao PATH,SIZE,TYPE,MOUNTPOINTS | grep -E "TYPE|disk"
+  lsblk -ao PATH,SIZE,TYPE | grep -E "TYPE|disk"
   ask "Select the USB drive:" "/dev/" && DISK="/dev/$RESPONSE"
   ask "Proceeding will erase all data on ${DISK}. Do you agree [y/N]?"
   if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
+    msg "Writing to drives requires superuser access:"
     # Return "true", if umount throws "not mounted" error.
-    msg "Writing to disks requires superuser access:"
     umount -q ${DISK}?* || /bin/true && sudo wipefs --all ${DISK} > /dev/null
     # Write image into USB disk.
     msg "Writing Arch Linux image to the USB drive. Do NOT remove the drive."
@@ -80,5 +88,4 @@ else
 fi
 
 # Remove cache directory.
-cd .. && rm -rf archinstall_cache
-exit
+cd .. && rm -rf archinstall_cache && exit

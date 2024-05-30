@@ -4,13 +4,13 @@ set -e
 
 # -----------------------------------------------------------------------------
 # This script performs basic Arch Linux installation.
-# 
-# There are three installation types (details below):
-# Arch Linux as a single OS, dual boot with Windows, and headless server setup.
+# The installation includes:
+# - UEFI Secure Boot, Unified Kernel Image, luks encryption of root partition
+# - Wayland display server, GNOME desktop environment
+# - AppArmor+audit (MAC), nftables (firewall), firejail (sandboxing)
 # -----------------------------------------------------------------------------
 
-# GitHub repository containing necessary dotfiles.
-RESOURCES="https://raw.githubusercontent.com/mkmaslov/archsetup/main"
+# Output formatting.
 
 # Highlight the output.
 YELLOW="\e[1;33m" && RED="\e[1;31m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
@@ -24,17 +24,14 @@ success() { cprint ${GREEN} "${1}\n"; }
 ask () { status "$1 " && echo -ne "$2" && read RESPONSE; }
 
 # Confirm whether a certain requirement for continuing installation is fulfilled.
-# If not and the disks are already mounted - unmount and encrypt the drives.
+# If not and the drives are already mounted - unmount and encrypt the drives.
 confirm() { 
   ask "${1} [Y/n]?"
   if [[ ${RESPONSE} =~ ^(no|n|N|NO|No)$ ]]; then
     error "Cancelling installation."
     if [ "$MOUNTED" -eq 0 ]; then
-      umount ${EFI}
-      umount ${ROOT}
-      swapoff ${SWAP}
-      vgchange -a n main
-      cryptsetup close ${LVM}
+      umount ${EFI} && umount ${ROOT} && swapoff ${SWAP}
+      vgchange -a n main && cryptsetup close ${LVM}
     fi
     exit
   else
@@ -47,27 +44,8 @@ confirm() {
 # -----------------------------------------------------------------------------
 
 # Reset terminal window.
-loadkeys us ; setfont ter-132b ; clear
-
-# Choose installation type.
+loadkeys us ; setfont ter-132b ; clear ; WINDOWS=1 ; NVIDIA=1
 msg    "** ARCH LINUX INSTALLATION **"
-msg    "Available installation types:"
-msg    "[1]: Arch Linux as a single OS, includes:"
-cprint "     - Secure Boot, Unified Kernel Image, luks encryption\n"
-cprint "     - Wayland display server, GNOME desktop environment\n"
-cprint "     - AppArmor+audit (MAC), nftables (firewall), firejail (sandboxing)\n"
-msg    "[2]: Arch Linux alongside Windows. Same as [1], but:"
-cprint "     - does not erase the disk, preserving Windows partitions\n"
-cprint "     - uses EFI boot partition created by Windows\n"
-error  "       (WARNING! Windows Update may prevent Linux from booting!)\n"
-msg    "[3]: Arch Linux as a single OS on a headless server."
-cprint "     - This option is not implemented yet."
-ask "Choose installation type [1,2,3]:" "" ; clear
-WINDOWS=1 ; SERVER=1 ; MOUNTED=1 ; NVIDIA=1
-case $RESPONSE in
-  "2") WINDOWS=0 ;;
-  "3") SERVER=0 ;;
-esac
 
 # Check whether Secure Boot is disabled.
 msg "Full Secure Boot reset is recommended before using this script."
@@ -135,25 +113,24 @@ msg "List of attached storage devices:"
 lsblk -ado PATH,SIZE
 ask "Choose target drive for installation:" "/dev/" && DISK="/dev/${RESPONSE}"
 
-# Partition target drive.
-if [ "$WINDOWS" -eq 0 ]; then
-  confirm "Installing Linux alongside Windows on ${DISK}. Do you agree"
+# Partition the target drive.
+ask "Are you installing Arch Linux alongside Windows (dual boot) [y/N]?"
+if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   # Windows creates 4 partitions, including EFI boot partition.
   # Hence, Arch Linux only needs one partition that takes all free disk space.
-  sgdisk ${DISK} -n 5:0:0 -t 5:8e00 -c 5:LVM &>/dev/null
+  WINDOWS=0 ; sgdisk ${DISK} -n 5:0:0 -t 5:8e00 -c 5:LVM &>/dev/null
 else
   confirm "Deleting all data on ${DISK}. Do you agree"
   wipefs -af ${DISK} &>/dev/null
   sgdisk ${DISK} -Zo -I -n 1:0:4096M -t 1:ef00 -c 1:EFI \
     -n 2:0:0 -t 2:8e00 -c 2:LVM &>/dev/null
 fi
-msg "Current partition table:"
-sgdisk -p ${DISK}
+msg "Current partition table:" && sgdisk -p ${DISK}
 confirm "Do you want to continue the installation"
 
-# Notify kernel about filesystem changes and get partition labels.
+# Notify kernel about filesystem changes and fetch partition labels.
 msg "Updating information about partitions, please wait."
-sleep 5 && partprobe ${DISK} && sleep 5
+sleep 5 ; partprobe ${DISK} ; sleep 5
 EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c7-)"
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
 EFI_UUID="$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep EFI | cut -d \" \" -f1)"
@@ -227,8 +204,7 @@ PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
 PKGS+="lvm2 nautilus sushi "
 ask "Do you want to install the proprietary NVIDIA driver [y/N]?"
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
-  NVIDIA=0
-  PKGS+="nvidia "
+  NVIDIA=0 ; PKGS+="nvidia "
 fi
 # Install packages.
 pacstrap -K /mnt ${PKGS}
@@ -281,12 +257,16 @@ arch-chroot /mnt locale-gen &>/dev/null
 # Set up the timezone.
 arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 
+# GitHub repository containing necessary dotfiles.
+RESOURCES="https://raw.githubusercontent.com/mkmaslov/archsetup/main"
+
 # Set up users.
 msg "Choose a password for the root user:"
 arch-chroot /mnt passwd
 ask "Choose a username of a non-root user:" && USERNAME="${RESPONSE}"
 arch-chroot /mnt useradd -m -G wheel -s /bin/zsh ${USERNAME}
-curl "${RES}/resources/user.zshrc" > "/mnt/home/${USERNAME}/.zshrc"
+curl "${RESOURCES}/resources/user.zshrc" > "/mnt/home/${USERNAME}/.zshrc"
+curl "${RESOURCES}/resources/root.zshrc" > "/mnt/root/.zshrc"
 msg "Choose a password for ${USERNAME}:"
 arch-chroot /mnt passwd ${USERNAME}
 sed -i 's/# \(%wheel ALL=(ALL\(:ALL\|\)) ALL\)/\1/g' /mnt/etc/sudoers
@@ -364,18 +344,19 @@ if [ "$NVIDIA" -eq 0 ]; then
   /mnt/etc/modprobe.d/nvidia-power-management.conf
 fi
 echo ${CMDLINE} > /mnt/etc/kernel/cmdline
-# creating preset
+# Create mkinitcpio preset.
 cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
   ALL_config="/etc/mkinitcpio.conf"
   ALL_kver="/boot/vmlinuz-linux"
   ALL_microcode=(/boot/*-ucode.img)
   PRESETS=('default' 'fallback')
-  default_uki="/efi/EFI/Linux/arch.efi"
+  default_uki="/efi/EFI/Linux/arch-linux.efi"
   fallback_options="-S autodetect --cmdline /etc/kernel/cmdline_fallback"
-  fallback_uki="/efi/EFI/Linux/arch-fb.efi"
+  fallback_uki="/efi/EFI/Linux/arch-linux-fallback.efi"
 EOF
-mkdir -p /mnt/efi/EFI/Linux
-arch-chroot /mnt mkinitcpio -P
+# Generate UKI.
+mkdir -p /mnt/efi/EFI/Linux && arch-chroot /mnt mkinitcpio -P
+# Remove exposed initramfs files.
 rm /mnt/efi/initramfs-*.img &>/dev/null || true
 rm /mnt/boot/initramfs-*.img &>/dev/null || true
 confirm "Do you want to continue the installation"

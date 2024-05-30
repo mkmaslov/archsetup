@@ -36,6 +36,9 @@ sudo pacman -S --needed \
   torbrowser-launcher qemu-base libvirt virt-manager iptables-nft dnsmasq \
   dosfstools xorg-xeyes xournalpp pdfarranger rsync gedit powertop \
   qt5-wayland qt6-wayland
+
+PKGS+="libheif"
+
 confirm
 
 # Packages for virtualization:
@@ -49,8 +52,10 @@ systemctl enable --user libvirtd
 cprint "Configuring zsh shell for root user."
 cprint "Please enter ROOT password:"
 su -c "chsh -s /bin/zsh"
-curl "${RES}/root.zshrc" > ".temp_zshrc"
-sudo mv ".temp_zshrc" "/root/.zshrc"
+
+# done in install script
+#curl "${RES}/root.zshrc" > ".temp_zshrc"
+#sudo mv ".temp_zshrc" "/root/.zshrc"
 
 # Installing yay AUR helper
 cprint "Installing yay AUR helper"
