@@ -215,7 +215,7 @@ systemctl enable apparmor.service --root=/mnt &>/dev/null
 systemctl enable auditd.service --root=/mnt &>/dev/null
 systemctl enable bluetooth --root=/mnt &>/dev/null
 systemctl enable NetworkManager --root=/mnt &>/dev/null
-systemctl enable firewalld.service --root=/mnt &>/dev/null
+#systemctl enable firewalld.service --root=/mnt &>/dev/null
 systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
 systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
 systemctl enable gdm.service --root=/mnt &>/dev/null
@@ -231,6 +231,8 @@ systemctl mask geoclue.service --root=/mnt &>/dev/null
 systemctl mask org.gnome.SettingsDaemon.UsbProtection.service --root=/mnt &>/dev/null
 systemctl mask org.gnome.SettingsDaemon.Wacom.service --root=/mnt &>/dev/null
 systemctl mask org.gnome.SettingsDaemon.Smartcard.service --root=/mnt &>/dev/null
+
+# Works till here.
 
 # -----------------------------------------------------------------------------
 # User configuration.
