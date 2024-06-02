@@ -54,7 +54,7 @@ cprint "- Restore factory default Secure Boot keys\n"
 cprint "- Reset Secure Boot to \"Setup Mode\"\n"
 cprint "- Disable Secure Boot\n"
 msg "Verifying Secure Boot status. The output should contain: disabled (setup)."
-bootctl status >& /dev/null | grep "Secure Boot:"
+bootctl status | grep "Secure Boot"
 confirm "Did you reset and disable Secure Boot"
 
 # Test Internet connection.
@@ -135,8 +135,8 @@ msg "Updating information about partitions, please wait."
 sleep 5 ; partprobe ${DISK} ; sleep 5
 EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c7-)"
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
-EFI_UUID="$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep EFI | cut -d " " -f1)"
-LVM_UUID="$(lsblk ${DISK} -o PARTUUID,PARTLABEL | grep LVM | cut -d " " -f1)"
+EFI_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep EFI | cut -d " " -f1)"
+LVM_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep LVM | cut -d " " -f1)"
 
 # Set up LUKS encryption for the LVM partition.
 msg "Setting up full-disk encryption. You will be prompted for a password."
@@ -293,6 +293,8 @@ sed -i 's,#ParallelDownloads = 5,ParallelDownloads = 10,g' /mnt/etc/pacman.conf
 # Unified Kernel Image configuration.
 # -----------------------------------------------------------------------------
 
+# Something wrong here
+
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
 echo "lvm UUID=${LVM_UUID} - \
 luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
@@ -343,8 +345,9 @@ cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
   fallback_options="-S autodetect --cmdline /etc/kernel/cmdline_fallback"
   fallback_uki="/efi/EFI/Linux/arch-linux-fallback.efi"
 EOF
-# Generate UKI: >& /dev/null is due to bug in mkinitcpio->sbctl signing
-mkdir -p /mnt/efi/EFI/Linux && arch-chroot /mnt mkinitcpio -P >& /dev/null
+# Generate UKI: "|| true" is due to a bug in sbctl signing inside mkinitcpio
+# See more: https://github.com/Foxboron/sbctl/pull/312
+mkdir -p /mnt/efi/EFI/Linux && arch-chroot /mnt mkinitcpio -P || true
 # Remove exposed initramfs files.
 rm /mnt/efi/initramfs-*.img &>/dev/null || true
 rm /mnt/boot/initramfs-*.img &>/dev/null || true
@@ -376,12 +379,12 @@ success "UEFI boot entries successfully created!"
 
 # Finish installation.
 clear ; success "** ARCH LINUX INSTALLATION: COMPLETED **\n"
-cprint  "Please set up the desired boot order using:"
-cprint  ">>  efibootmgr --bootorder XXXX,YYYY,...\n"
-cprint  "To remove unused boot entries, use:"
-cprint  ">>  efibootmgr -b XXXX --delete-bootnum\n"
-cprint  "After finishing UEFI configuration, reboot into BIOS using:"
-cprint  ">>  systemctl reboot --firmware-setup\n"
+cprint  "Please set up the desired boot order using:\n"
+cprint  ">>  efibootmgr --bootorder XXXX,YYYY,...\n\n"
+cprint  "To remove unused boot entries, use:\n"
+cprint  ">>  efibootmgr -b XXXX --delete-bootnum\n\n"
+cprint  "After finishing UEFI configuration, reboot into BIOS using:\n"
+cprint  ">>  systemctl reboot --firmware-setup\n\n"
 cprint  "Inside the BIOS, enable Secure Boot and Boot Order Lock (if present)."
 
 # -----------------------------------------------------------------------------
