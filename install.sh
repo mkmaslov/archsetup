@@ -54,7 +54,7 @@ cprint "- Restore factory default Secure Boot keys\n"
 cprint "- Reset Secure Boot to \"Setup Mode\"\n"
 cprint "- Disable Secure Boot\n"
 msg "Verifying Secure Boot status. The output should contain: disabled (setup)."
-bootctl --quiet --graceful status | grep "Secure Boot:"
+bootctl status >& /dev/null | grep "Secure Boot:"
 confirm "Did you reset and disable Secure Boot"
 
 # Test Internet connection.
@@ -343,8 +343,8 @@ cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
   fallback_options="-S autodetect --cmdline /etc/kernel/cmdline_fallback"
   fallback_uki="/efi/EFI/Linux/arch-linux-fallback.efi"
 EOF
-# Generate UKI.
-mkdir -p /mnt/efi/EFI/Linux && arch-chroot /mnt mkinitcpio -P
+# Generate UKI: >& /dev/null is due to bug in mkinitcpio->sbctl signing
+mkdir -p /mnt/efi/EFI/Linux && arch-chroot /mnt mkinitcpio -P >& /dev/null
 # Remove exposed initramfs files.
 rm /mnt/efi/initramfs-*.img &>/dev/null || true
 rm /mnt/boot/initramfs-*.img &>/dev/null || true
