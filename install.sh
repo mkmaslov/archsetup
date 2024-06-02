@@ -173,8 +173,8 @@ msg "Installing packages:"
 # (this operation takes a long time and is therefore disabled by default)
 # pacman-key --refresh-keys &>/dev/null
 
-# Pacstrap parallel downloads?
-
+# Enable parallel downloads for pacstrap.
+sed -i 's,#ParallelDownloads = 5,ParallelDownloads = 10,g' /etc/pacman.conf
 # Update pacman cache.
 pacman -Sy
 # Create a list of packages.
@@ -187,6 +187,8 @@ PKGS+="linux-firmware sof-firmware alsa-firmware ${MICROCODE} "
 PKGS+="efibootmgr sbctl "
 # Documentation.
 PKGS+="man-db man-pages texinfo "
+# ZSH shell.
+PKGS+="zsh zsh-completions zsh-syntax-highlighting zsh-autosuggestions "
 # Fonts.
 PKGS+="terminus-font "
 # Networking tools.
