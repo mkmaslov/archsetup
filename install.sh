@@ -5,9 +5,8 @@ set -e
 # -----------------------------------------------------------------------------
 # This script performs basic Arch Linux installation.
 # The installation includes:
-# - UEFI Secure Boot, Unified Kernel Image, luks encryption of root partition
+# - UEFI Secure Boot, Unified Kernel Image, luks encryption for root partition
 # - Wayland display server, GNOME desktop environment
-# - AppArmor+audit (MAC), nftables (firewall), firejail (sandboxing)
 # -----------------------------------------------------------------------------
 
 # Output formatting.
@@ -34,8 +33,6 @@ confirm() {
       vgchange -a n main && cryptsetup close ${LVM}
     fi
     exit
-  else
-    clear
   fi
 }
 
@@ -45,7 +42,7 @@ confirm() {
 
 # Reset terminal window.
 loadkeys us ; setfont ter-132b ; clear ; WINDOWS=1 ; NVIDIA=1
-msg    "** ARCH LINUX INSTALLATION **"
+msg "** ARCH LINUX INSTALLATION: PRE-CHECK **"
 
 # Check whether Secure Boot is disabled.
 msg "Full Secure Boot reset is recommended before using this script."
@@ -108,6 +105,8 @@ fi
 # Disk configuration.
 # -----------------------------------------------------------------------------
 
+clear ; msg "** ARCH LINUX INSTALLATION: DISK CONFIGURATION **"
+
 # Choose the target drive.
 msg "List of attached storage devices:"
 lsblk -ado PATH,SIZE
@@ -127,6 +126,8 @@ else
 fi
 msg "Current partition table:" && sgdisk -p ${DISK}
 confirm "Do you want to continue the installation"
+
+clear ; msg "** ARCH LINUX INSTALLATION: FULL-DISK ENCRYPTION **"
 
 # Notify kernel about filesystem changes and fetch partition labels.
 msg "Updating information about partitions, please wait."
@@ -171,6 +172,9 @@ msg "Installing packages:"
 # If the USB installation medium is old, one needs to update pacman keys:
 # (this operation takes a long time and is therefore disabled by default)
 # pacman-key --refresh-keys &>/dev/null
+
+# Pacstrap parallel downloads?
+
 # Update pacman cache.
 pacman -Sy
 # Create a list of packages.
@@ -181,15 +185,8 @@ PKGS+="base base-devel linux "
 PKGS+="linux-firmware sof-firmware alsa-firmware ${MICROCODE} "
 # UEFI and Secure Boot tools.
 PKGS+="efibootmgr sbctl "
-# AppArmor (Mandatory Access Control system) and Audit framework
-PKGS+="apparmor audit "
-# Application sandboxing.
-PKGS+="firejail firetools "
 # Documentation.
 PKGS+="man-db man-pages texinfo "
-# CLI tools.
-PKGS+="tmux neovim nano btop git go jq "
-PKGS+="zsh zsh-completions zsh-syntax-highlighting zsh-autosuggestions "
 # Fonts.
 PKGS+="terminus-font "
 # Networking tools.
@@ -201,7 +198,7 @@ PKGS+="pipewire-pulse pipewire-alsa pipewire-jack "
 PKGS+="gdm gnome-control-center gnome-terminal wl-clipboard gnome-keyring "
 PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
 # File(system) management tools.
-PKGS+="lvm2 nautilus sushi "
+PKGS+="lvm2 nautilus "
 ask "Do you want to install the proprietary NVIDIA driver [y/N]?"
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   NVIDIA=0 ; PKGS+="nvidia "
@@ -211,11 +208,8 @@ pacstrap -K /mnt ${PKGS}
 confirm "Do you want to continue the installation"
 
 # Enable daemons.
-systemctl enable apparmor.service --root=/mnt &>/dev/null
-systemctl enable auditd.service --root=/mnt &>/dev/null
 systemctl enable bluetooth --root=/mnt &>/dev/null
 systemctl enable NetworkManager --root=/mnt &>/dev/null
-#systemctl enable firewalld.service --root=/mnt &>/dev/null
 systemctl enable wpa_supplicant.service --root=/mnt &>/dev/null
 systemctl enable systemd-resolved.service --root=/mnt &>/dev/null
 systemctl enable gdm.service --root=/mnt &>/dev/null
@@ -226,13 +220,10 @@ if [ "$NVIDIA" -eq 0 ]; then
   systemctl enable nvidia-resume.service --root=/mnt &>/dev/null
 fi
 
-# Mask useless services.
+# Mask unused services.
 systemctl mask geoclue.service --root=/mnt &>/dev/null
-systemctl mask org.gnome.SettingsDaemon.UsbProtection.service --root=/mnt &>/dev/null
 systemctl mask org.gnome.SettingsDaemon.Wacom.service --root=/mnt &>/dev/null
 systemctl mask org.gnome.SettingsDaemon.Smartcard.service --root=/mnt &>/dev/null
-
-# Works till here.
 
 # -----------------------------------------------------------------------------
 # User configuration.
@@ -259,16 +250,11 @@ arch-chroot /mnt locale-gen &>/dev/null
 # Set up the timezone.
 arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 
-# GitHub repository containing necessary dotfiles.
-RESOURCES="https://raw.githubusercontent.com/mkmaslov/archsetup/main"
-
 # Set up users.
 msg "Choose a password for the root user:"
 arch-chroot /mnt passwd
 ask "Choose a username of a non-root user:" && USERNAME="${RESPONSE}"
 arch-chroot /mnt useradd -m -G wheel -s /bin/zsh ${USERNAME}
-curl "${RESOURCES}/resources/user.zshrc" > "/mnt/home/${USERNAME}/.zshrc"
-curl "${RESOURCES}/resources/root.zshrc" > "/mnt/root/.zshrc"
 msg "Choose a password for ${USERNAME}:"
 arch-chroot /mnt passwd ${USERNAME}
 sed -i 's/# \(%wheel ALL=(ALL\(:ALL\|\)) ALL\)/\1/g' /mnt/etc/sudoers
@@ -279,6 +265,16 @@ cat > /mnt/etc/gdm/custom.conf <<EOF
   AutomaticLogin=${USERNAME}
 EOF
 
+# GitHub repository containing necessary dotfiles.
+RESOURCES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
+curl "${RESOURCES}/arch/user.zshrc" > "/mnt/home/${USERNAME}/.zshrc"
+curl "${RESOURCES}/arch/root.zshrc" > "/mnt/root/.zshrc"
+echo "!!! test1"
+arch-chroot /mnt chsh -s /bin/zsh ${USERNAME}
+arch-chroot /mnt chsh -s /bin/zsh
+echo "!!! test2"
+confirm "test"
+
 # Set up environment variables.
 cat >> /mnt/etc/environment <<EOF
   EDITOR=nvim
@@ -286,18 +282,13 @@ cat >> /mnt/etc/environment <<EOF
   QT_QPA_PLATFORMTHEME="wayland;xcb"
   ELECTRON_OZONE_PLATFORM_HINT=auto
 EOF
-if [ "$NVIDIA" -eq 0 ]; then
-  echo "GBM_BACKEND=nvidia-drm" >> /mnt/etc/environment
-fi
+[ "$NVIDIA" -eq 0 ] && echo "GBM_BACKEND=nvidia-drm" >> /mnt/etc/environment
 
 # Create default directory for PulseAudio. (to avoid journalctl warning)
 mkdir -p /mnt/etc/pulse/default.pa.d
 
 # Enable parallel downloads in pacman.
 sed -i 's,#ParallelDownloads,ParallelDownloads,g' /mnt/etc/pacman.conf
-
-# Enable AppArmor rules cashing.
-sed -i 's,#write-cache,write-cache,g' /mnt/etc/apparmor/parser.conf
 
 # -----------------------------------------------------------------------------
 # Unified Kernel Image configuration.
@@ -336,8 +327,6 @@ CMDLINE="root=UUID=${ROOT_UUID} resume=UUID=${SWAP_UUID} "
 CMDLINE+="cryptdevice=UUID=${LVM_UUID}:main rw "
 # Fallback image should contain minimal amount of kernel parameters.
 echo ${CMDLINE} > /mnt/etc/kernel/cmdline_fallback
-# Kernel parameters: security
-CMDLINE+="lsm=landlock,lockdown,yama,integrity,apparmor,bpf audit=1 "
 # Kernel parameters: NVIDIA drivers
 if [ "$NVIDIA" -eq 0 ]; then
   CMDLINE+="nvidia_drm.modeset=1 nvidia_drm.fbdev=1"
@@ -396,4 +385,5 @@ cprint  ">>  efibootmgr -b XXXX --delete-bootnum\n"
 cprint  "After finishing UEFI configuration, reboot into BIOS using:"
 cprint  ">>  systemctl reboot --firmware-setup\n"
 cprint  "Inside the BIOS, enable Secure Boot and Boot Order Lock (if present)."
+
 # -----------------------------------------------------------------------------

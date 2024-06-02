@@ -37,8 +37,15 @@ sudo pacman -S --needed \
   dosfstools xorg-xeyes xournalpp pdfarranger rsync gedit powertop \
   qt5-wayland qt6-wayland
 
-PKGS+="libheif"
-
+PKGS=""
+# CLI tools.
+PKGS+="tmux neovim btop git go jq "
+PKGS+="zsh zsh-completions zsh-syntax-highlighting zsh-autosuggestions "
+# Image viewing/editing.
+PKGS+="eog libheif gimp inkscape "
+# GNOME tools.
+PKGS+="sushi "
+sudo pacman -S --needed ${PKGS}
 confirm
 
 # Packages for virtualization:
@@ -75,6 +82,29 @@ confirm
 curl "${SCRIPTS}/configure_gnome.sh" > "${TEMPDIR}/configure_gnome.sh"
 bash ${TEMPDIR}/configure_gnome.sh
 confirm
+
+# Install and configure Seafile.
+cp /usr/share/applications/seafile.desktop ${HOME}/.config/autostart/
+
+# Install and configure USBGuard.
+pacman -S --needed usbguard
+systemctl enable usbguard-dbus.service --root=/mnt &>/dev/null
+
+# Grant GNOME access to USBGuard.
+curl "${RESOURCES}/arch/usbguard.rules" > \
+  "/mnt/etc/polkit-1/rules.d/70-allow-usbguard.rules"
+
+# apparmor, audit, firejail, firetools, usbguard
+systemctl enable apparmor.service --root=/mnt &>/dev/null
+systemctl enable auditd.service --root=/mnt &>/dev/null
+# Enable AppArmor rules cashing.
+sed -i 's,#write-cache,write-cache,g' /mnt/etc/apparmor/parser.conf
+
+# Set Firefox as default browser.
+xdg-settings set default-web-browser firefox.desktop
+
+# Kernel parameters: security
+CMDLINE+="lsm=landlock,lockdown,yama,integrity,apparmor,bpf audit=1 "
 
 # Configure nvim text editor (user and root).
 cprint "Configuring nvim:"

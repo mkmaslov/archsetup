@@ -89,3 +89,5 @@ fi
 
 # Remove cache directory.
 cd .. && rm -rf archinstall_cache && exit
+
+# -----------------------------------------------------------------------------
