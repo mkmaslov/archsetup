@@ -42,7 +42,7 @@ confirm() {
 
 # Reset terminal window.
 loadkeys us ; setfont ter-132b ; clear ; WINDOWS=1 ; NVIDIA=1
-msg "** ARCH LINUX INSTALLATION: PRE-CHECK **"
+msg "** ARCH LINUX INSTALLATION: PRE-CHECK **\n"
 
 # Check whether Secure Boot is disabled.
 msg "Full Secure Boot reset is recommended before using this script."
@@ -54,7 +54,7 @@ cprint "- Restore factory default Secure Boot keys\n"
 cprint "- Reset Secure Boot to \"Setup Mode\"\n"
 cprint "- Disable Secure Boot\n"
 msg "Verifying Secure Boot status. The output should contain: disabled (setup)."
-bootctl --quiet status | grep "Secure Boot:"
+bootctl --quiet --graceful status | grep "Secure Boot:"
 confirm "Did you reset and disable Secure Boot"
 
 # Test Internet connection.
@@ -105,12 +105,13 @@ fi
 # Disk configuration.
 # -----------------------------------------------------------------------------
 
-clear ; msg "** ARCH LINUX INSTALLATION: DISK CONFIGURATION **"
+clear ; msg "** ARCH LINUX INSTALLATION: DISK CONFIGURATION **\n"
 
 # Choose the target drive.
 msg "List of attached storage devices:"
-lsblk -ado PATH,SIZE
-ask "Choose target drive for installation:" "/dev/" && DISK="/dev/${RESPONSE}"
+lsblk -ao PATH,SIZE,TYPE -T=PATH
+ask "Choose target drive for installation (with TYPE=disk):" \
+  "/dev/" && DISK="/dev/${RESPONSE}"
 
 # Partition the target drive.
 ask "Are you installing Arch Linux alongside Windows (dual boot) [y/N]?"
@@ -127,7 +128,7 @@ fi
 msg "Current partition table:" && sgdisk -p ${DISK}
 confirm "Do you want to continue the installation"
 
-clear ; msg "** ARCH LINUX INSTALLATION: FULL-DISK ENCRYPTION **"
+clear ; msg "** ARCH LINUX INSTALLATION: FULL-DISK ENCRYPTION **\n"
 
 # Notify kernel about filesystem changes and fetch partition labels.
 msg "Updating information about partitions, please wait."
@@ -167,8 +168,8 @@ confirm "Do you want to continue the installation"
 # Package installation.
 # -----------------------------------------------------------------------------
 
-# Install packages to the / (root) partition.
-msg "Installing packages:"
+clear ; msg "** ARCH LINUX INSTALLATION: PACKAGE INSTALLATION **\n"
+
 # If the USB installation medium is old, one needs to update pacman keys:
 # (this operation takes a long time and is therefore disabled by default)
 # pacman-key --refresh-keys &>/dev/null
@@ -193,8 +194,7 @@ PKGS+="zsh zsh-completions zsh-syntax-highlighting zsh-autosuggestions "
 PKGS+="terminus-font "
 # Networking tools.
 PKGS+="networkmanager wpa_supplicant network-manager-applet "
-# Audio.
-# pipewire is installed as dependency of gdm -> mutter.
+# Audio: pipewire is installed as dependency of gdm -> mutter.
 PKGS+="pipewire-pulse pipewire-alsa pipewire-jack "
 # GNOME desktop environment - base packages.
 PKGS+="gdm gnome-control-center gnome-terminal wl-clipboard gnome-keyring "
@@ -205,7 +205,8 @@ ask "Do you want to install the proprietary NVIDIA driver [y/N]?"
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
   NVIDIA=0 ; PKGS+="nvidia "
 fi
-# Install packages.
+
+# Install packages to the / (root) partition.
 pacstrap -K /mnt ${PKGS}
 confirm "Do you want to continue the installation"
 
@@ -232,7 +233,7 @@ systemctl mask org.gnome.SettingsDaemon.Smartcard.service --root=/mnt &>/dev/nul
 # -----------------------------------------------------------------------------
 
 # Set hostname.
-ask "Choose a hostname:" && HOSTNAME="${RESPONSE}"
+clear ; ask "Choose a hostname:" && HOSTNAME="${RESPONSE}"
 echo "${HOSTNAME}" > /mnt/etc/hostname
 cat >> /mnt/etc/hosts <<EOF
   127.0.0.1   localhost
@@ -271,11 +272,7 @@ EOF
 RESOURCES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
 curl "${RESOURCES}/arch/user.zshrc" > "/mnt/home/${USERNAME}/.zshrc"
 curl "${RESOURCES}/arch/root.zshrc" > "/mnt/root/.zshrc"
-echo "!!! test1"
-arch-chroot /mnt chsh -s /bin/zsh ${USERNAME}
 arch-chroot /mnt chsh -s /bin/zsh
-echo "!!! test2"
-confirm "test"
 
 # Set up environment variables.
 cat >> /mnt/etc/environment <<EOF
@@ -290,7 +287,7 @@ EOF
 mkdir -p /mnt/etc/pulse/default.pa.d
 
 # Enable parallel downloads in pacman.
-sed -i 's,#ParallelDownloads,ParallelDownloads,g' /mnt/etc/pacman.conf
+sed -i 's,#ParallelDownloads = 5,ParallelDownloads = 10,g' /mnt/etc/pacman.conf
 
 # -----------------------------------------------------------------------------
 # Unified Kernel Image configuration.
@@ -311,7 +308,7 @@ EOF
 # Change mkinitcpio hooks. (do NOT add spaces/tabs)
 sed -i "s,HOOKS=(base udev autodetect modconf kms keyboard keymap \
 consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect \
-modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g" \
+microcode modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g" \
 /mnt/etc/mkinitcpio.conf
 
 # Add mkinitcpio modules for NVIDIA driver.
@@ -341,7 +338,6 @@ echo ${CMDLINE} > /mnt/etc/kernel/cmdline
 cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
   ALL_config="/etc/mkinitcpio.conf"
   ALL_kver="/boot/vmlinuz-linux"
-  ALL_microcode=(/boot/*-ucode.img)
   PRESETS=('default' 'fallback')
   default_uki="/efi/EFI/Linux/arch-linux.efi"
   fallback_options="-S autodetect --cmdline /etc/kernel/cmdline_fallback"
@@ -379,7 +375,7 @@ efibootmgr --create --disk ${DISK} --part 1 \
 success "UEFI boot entries successfully created!"
 
 # Finish installation.
-clear ; success "** Arch Linux installation completed successfully! **"
+clear ; success "** ARCH LINUX INSTALLATION: COMPLETED **\n"
 cprint  "Please set up the desired boot order using:"
 cprint  ">>  efibootmgr --bootorder XXXX,YYYY,...\n"
 cprint  "To remove unused boot entries, use:"
