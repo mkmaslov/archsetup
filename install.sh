@@ -50,6 +50,7 @@ cprint "To perform the reset:\n"
 cprint "- Enter BIOS firmware (by pressing F1/F2/Esc/Enter/Del at boot)\n"
 cprint "- Navigate to the \"Security\" settings tab\n"
 cprint "- Delete/clear all Secure Boot keys\n"
+# maybe this is not needed?
 cprint "- Restore factory default Secure Boot keys\n"
 cprint "- Reset Secure Boot to the \"Setup Mode\"\n"
 cprint "- Disable Secure Boot\n"
@@ -105,7 +106,7 @@ fi
 # Disk configuration.
 # -----------------------------------------------------------------------------
 
-clear ; msg "ARCH LINUX INSTALLATION: DISK CONFIGURATION\n\n"
+clear ; msg "ARCH LINUX INSTALLATION: DISK CONFIGURATION\n"
 
 # Choose the target drive.
 msg "List of the attached storage devices:"
@@ -128,15 +129,14 @@ fi
 msg "\nCurrent partition table:" && sgdisk -p ${DISK}
 confirm "\nDo you want to proceed with the installation"
 
-clear ; msg "ARCH LINUX INSTALLATION: FULL-DISK ENCRYPTION\n\n"
+clear ; msg "ARCH LINUX INSTALLATION: FULL-DISK ENCRYPTION\n"
 
 # Notify kernel about filesystem changes and fetch partition labels.
 msg "Updating information about disk partitions, please wait."
 sleep 5 ; partprobe ${DISK} ; sleep 5
 EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c7-)"
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
-EFI_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep EFI | cut -d " " -f1)"
-LVM_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep LVM | cut -d " " -f1)"
+
 
 # Set up LUKS encryption for the LVM partition.
 msg "Setting up full-disk encryption. You will be prompted for a password."
@@ -153,9 +153,7 @@ pvcreate ${MAPLVM} && vgcreate main ${MAPLVM}
 lvcreate -L18G main -n swap
 lvcreate -l 100%FREE main -n root
 SWAP="/dev/mapper/main-swap"
-SWAP_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-swap | cut -d " " -f1)"
 ROOT="/dev/mapper/main-root"
-ROOT_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-root | cut -d " " -f1)"
 [ "$WINDOWS" -eq 1 ] && mkfs.fat -F 32 ${EFI} &>/dev/null
 mkfs.ext4 ${ROOT} &>/dev/null
 mkswap ${SWAP} && swapon ${SWAP}
@@ -163,6 +161,10 @@ mount ${ROOT} /mnt
 mkdir /mnt/efi
 mount ${EFI} /mnt/efi
 MOUNTED=0
+EFI_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep EFI | cut -d " " -f1)"
+LVM_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep LVM | cut -d " " -f1)"
+SWAP_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-swap | cut -d " " -f1)"
+ROOT_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-root | cut -d " " -f1)"
 confirm "\nDo you want to proceed with the installation"
 
 # -----------------------------------------------------------------------------
@@ -300,9 +302,11 @@ confirm "\nDo you want to proceed with the installation"
 # Unified Kernel Image configuration.
 # -----------------------------------------------------------------------------
 
-clear ; msg "ARCH LINUX INSTALLATION: UNIFIED KERNEL IMAGE CREATION\n"
+clear ; msg "ARCH LINUX INSTALLATION: UNIFIED KERNEL IMAGE CREATION"
 # mkinitcpio bug in sbctl hook: https://github.com/Foxboron/sbctl/pull/312
 error "(ignore possible \"sbctl\" errors)\n"
+
+# disk-by-uuid does not work
 
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
 echo "lvm UUID=${LVM_UUID} - \
