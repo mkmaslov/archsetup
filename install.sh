@@ -137,7 +137,6 @@ sleep 5 ; partprobe ${DISK} ; sleep 5
 EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c7-)"
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
 
-
 # Set up LUKS encryption for the LVM partition.
 msg "Setting up full-disk encryption. You will be prompted for a password."
 modprobe dm-crypt
@@ -161,10 +160,13 @@ mount ${ROOT} /mnt
 mkdir /mnt/efi
 mount ${EFI} /mnt/efi
 MOUNTED=0
+
+# Read out UUID's, after creating partitions (mkfs resets UUID).
 EFI_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep EFI | cut -d " " -f1)"
 LVM_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep LVM | cut -d " " -f1)"
 SWAP_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-swap | cut -d " " -f1)"
 ROOT_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-root | cut -d " " -f1)"
+
 confirm "\nDo you want to proceed with the installation"
 
 # -----------------------------------------------------------------------------
@@ -305,8 +307,6 @@ confirm "\nDo you want to proceed with the installation"
 clear ; msg "ARCH LINUX INSTALLATION: UNIFIED KERNEL IMAGE CREATION"
 # mkinitcpio bug in sbctl hook: https://github.com/Foxboron/sbctl/pull/312
 error "(ignore possible \"sbctl\" errors)\n"
-
-# disk-by-uuid does not work
 
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
 echo "lvm UUID=${LVM_UUID} - \
