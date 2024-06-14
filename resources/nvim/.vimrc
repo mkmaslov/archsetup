@@ -8,4 +8,5 @@ set tabstop=4
 set shiftwidth=2
 set clipboard+=unnamedplus
 set colorcolumn=80
+colorscheme vim
 highlight ColorColumn ctermbg=0 guibg=lightgrey

@@ -42,23 +42,23 @@ confirm() {
 
 # Reset terminal window.
 loadkeys us ; setfont ter-132b ; clear ; WINDOWS=1 ; NVIDIA=1
-msg "** ARCH LINUX INSTALLATION: PRE-CHECK **\n"
+msg "ARCH LINUX INSTALLATION: PRE-CHECK\n\n"
 
 # Check whether Secure Boot is disabled.
 msg "Full Secure Boot reset is recommended before using this script."
 cprint "To perform the reset:\n"
 cprint "- Enter BIOS firmware (by pressing F1/F2/Esc/Enter/Del at boot)\n"
 cprint "- Navigate to the \"Security\" settings tab\n"
-cprint "- Delete/Clear all Secure Boot keys\n"
+cprint "- Delete/clear all Secure Boot keys\n"
 cprint "- Restore factory default Secure Boot keys\n"
-cprint "- Reset Secure Boot to \"Setup Mode\"\n"
+cprint "- Reset Secure Boot to the \"Setup Mode\"\n"
 cprint "- Disable Secure Boot\n"
 msg "Verifying Secure Boot status. The output should contain: disabled (setup)."
-bootctl status | grep "Secure Boot"
+bootctl status | grep --color "Secure Boot"
 confirm "Did you reset and disable Secure Boot"
 
 # Test Internet connection.
-status "Testing Internet connection (takes few seconds): "
+status "\nTesting Internet connection (takes few seconds): "
 ping -w 5 archlinux.org &>/dev/null
 NREACHED=${?}
 if [ ${NREACHED} -ne 0 ]; then
@@ -105,12 +105,12 @@ fi
 # Disk configuration.
 # -----------------------------------------------------------------------------
 
-clear ; msg "** ARCH LINUX INSTALLATION: DISK CONFIGURATION **\n"
+clear ; msg "ARCH LINUX INSTALLATION: DISK CONFIGURATION\n\n"
 
 # Choose the target drive.
-msg "List of attached storage devices:"
+msg "List of the attached storage devices:"
 lsblk -ao PATH,SIZE,TYPE -T=PATH
-ask "Choose target drive for installation (with TYPE=disk):" \
+ask "Choose a target drive for the installation (with TYPE=disk):" \
   "/dev/" && DISK="/dev/${RESPONSE}"
 
 # Partition the target drive.
@@ -125,13 +125,13 @@ else
   sgdisk ${DISK} -Zo -I -n 1:0:4096M -t 1:ef00 -c 1:EFI \
     -n 2:0:0 -t 2:8e00 -c 2:LVM &>/dev/null
 fi
-msg "Current partition table:" && sgdisk -p ${DISK}
-confirm "Do you want to continue the installation"
+msg "\nCurrent partition table:" && sgdisk -p ${DISK}
+confirm "\nDo you want to proceed with the installation"
 
-clear ; msg "** ARCH LINUX INSTALLATION: FULL-DISK ENCRYPTION **\n"
+clear ; msg "ARCH LINUX INSTALLATION: FULL-DISK ENCRYPTION\n\n"
 
 # Notify kernel about filesystem changes and fetch partition labels.
-msg "Updating information about partitions, please wait."
+msg "Updating information about disk partitions, please wait."
 sleep 5 ; partprobe ${DISK} ; sleep 5
 EFI="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep EFI | cut -d " " -f1 | cut -c7-)"
 LVM="/dev/$(lsblk ${DISK} -o NAME,PARTLABEL | grep LVM | cut -d " " -f1 | cut -c7-)"
@@ -143,10 +143,11 @@ msg "Setting up full-disk encryption. You will be prompted for a password."
 modprobe dm-crypt
 cryptsetup luksFormat --cipher=aes-xts-plain64 \
   --key-size=512 --verify-passphrase ${LVM}
-msg "Mounting the encrypted drive. You will be prompted for the password."
+msg "\nMounting the encrypted drive. You will be prompted for the password."
 cryptsetup open --type luks ${LVM} lvm
 
 # Create LVM volumes, format and mount partitions.
+msg "\nCreating filesystems:"
 MAPLVM="/dev/mapper/lvm"
 pvcreate ${MAPLVM} && vgcreate main ${MAPLVM}
 lvcreate -L18G main -n swap
@@ -162,13 +163,13 @@ mount ${ROOT} /mnt
 mkdir /mnt/efi
 mount ${EFI} /mnt/efi
 MOUNTED=0
-confirm "Do you want to continue the installation"
+confirm "\nDo you want to proceed with the installation"
 
 # -----------------------------------------------------------------------------
 # Package installation.
 # -----------------------------------------------------------------------------
 
-clear ; msg "** ARCH LINUX INSTALLATION: PACKAGE INSTALLATION **\n"
+clear ; msg "ARCH LINUX INSTALLATION: PACKAGE INSTALLATION\n\n"
 
 # If the USB installation medium is old, one needs to update pacman keys:
 # (this operation takes a long time and is therefore disabled by default)
@@ -293,8 +294,6 @@ sed -i 's,#ParallelDownloads = 5,ParallelDownloads = 10,g' /mnt/etc/pacman.conf
 # Unified Kernel Image configuration.
 # -----------------------------------------------------------------------------
 
-# Something wrong here
-
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
 echo "lvm UUID=${LVM_UUID} - \
 luks,password-echo=no,x-systemd.device-timeout=0,timeout=0,\
@@ -319,7 +318,7 @@ if [ "$NVIDIA" -eq 0 ]; then
   MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm),g" \
   /mnt/etc/mkinitcpio.conf
 fi
-confirm "Do you want to continue the installation"
+confirm "\nDo you want to proceed with the installation"
 
 # Create Unified Kernel Image.
 msg "Creating Unified Kernel Image:"
@@ -351,7 +350,7 @@ mkdir -p /mnt/efi/EFI/Linux && arch-chroot /mnt mkinitcpio -P || true
 # Remove exposed initramfs files.
 rm /mnt/efi/initramfs-*.img &>/dev/null || true
 rm /mnt/boot/initramfs-*.img &>/dev/null || true
-confirm "Do you want to continue the installation"
+confirm "\nDo you want to proceed with the installation"
 
 # -----------------------------------------------------------------------------
 # Bootloader configuration.
@@ -378,13 +377,13 @@ efibootmgr --create --disk ${DISK} --part 1 \
 success "UEFI boot entries successfully created!"
 
 # Finish installation.
-clear ; success "** ARCH LINUX INSTALLATION: COMPLETED **\n"
-cprint  "Please set up the desired boot order using:\n"
-cprint  ">>  efibootmgr --bootorder XXXX,YYYY,...\n\n"
+clear ; success "ARCH LINUX INSTALLATION: INSTALLATION COMPLETED\n\n"
+cprint  "Please configure the desired boot order using:\n"
+cprint  ">>  efibootmgr --bootorder XXXX,YYYY,...\n"
 cprint  "To remove unused boot entries, use:\n"
-cprint  ">>  efibootmgr -b XXXX --delete-bootnum\n\n"
-cprint  "After finishing UEFI configuration, reboot into BIOS using:\n"
-cprint  ">>  systemctl reboot --firmware-setup\n\n"
-cprint  "Inside the BIOS, enable Secure Boot and Boot Order Lock (if present)."
+cprint  ">>  efibootmgr -b XXXX --delete-bootnum\n"
+cprint  "After finishing UEFI bootloader configuration, reboot into BIOS using:\n"
+cprint  ">>  systemctl reboot --firmware-setup\n"
+cprint  "In BIOS, enable Secure Boot and Boot Order Lock (if available)."
 
 # -----------------------------------------------------------------------------
