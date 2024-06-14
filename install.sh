@@ -321,7 +321,7 @@ cat >> /mnt/etc/fstab <<EOF
 EOF
 
 # Change mkinitcpio hooks. (do NOT add spaces/tabs)
-sed -i "s,HOOKS=(base udev autodetect modconf kms keyboard keymap \
+sed -i "s,HOOKS=(base udev autodetect microcode modconf kms keyboard keymap \
 consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect \
 microcode modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g" \
 /mnt/etc/mkinitcpio.conf
