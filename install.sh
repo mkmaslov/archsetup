@@ -42,7 +42,7 @@ confirm() {
 
 # Reset terminal window.
 loadkeys us ; setfont ter-132b ; clear ; WINDOWS=1 ; NVIDIA=1
-msg "ARCH LINUX INSTALLATION: PRE-CHECK\n\n"
+msg "ARCH LINUX INSTALLATION: PRE-CHECK\n"
 
 # Check whether Secure Boot is disabled.
 msg "Full Secure Boot reset is recommended before using this script."
@@ -57,8 +57,21 @@ msg "Verifying Secure Boot status. The output should contain: disabled (setup)."
 bootctl status | grep --color "Secure Boot"
 confirm "Did you reset and disable Secure Boot"
 
+# Check that system is booted in UEFI mode.
+status "\nChecking UEFI boot mode: "
+COUNT=$(ls /sys/firmware/efi/efivars | grep -c '.')
+if [ ${COUNT} -eq 0 ]; then
+  error  "failed."
+  cprint "Before proceeding with the installation, "
+  cprint "please make sure the system is booted in UEFI mode."
+  msg    "This setting can be configured in BIOS."
+  exit
+else
+  success "success."
+fi
+
 # Test Internet connection.
-status "\nTesting Internet connection (takes few seconds): "
+status "Testing Internet connection (takes few seconds): "
 ping -w 5 archlinux.org &>/dev/null
 NREACHED=${?}
 if [ ${NREACHED} -ne 0 ]; then
@@ -75,23 +88,10 @@ else
   timedatectl set-ntp true
 fi
 
-# Check that system is booted in UEFI mode.
-status "Checking UEFI boot mode: "
-COUNT=$(ls /sys/firmware/efi/efivars | grep -c '.')
-if [ ${COUNT} -eq 0 ]; then
-  error  "failed."
-  cprint "Before proceeding with the installation, "
-  cprint "please make sure the system is booted in UEFI mode."
-  msg    "This setting can be configured in BIOS."
-  exit
-else
-  success "success."
-fi
-
 # Check system clock synchronization.
 msg "Checking time synchronization:"
 timedatectl status | grep -E 'Local time|synchronized'
-confirm "Is system time correct and synchronized"
+confirm "\nIs system time correct and synchronized"
 
 # Detect CPU vendor.
 CPU=$(grep vendor_id /proc/cpuinfo)
@@ -169,7 +169,9 @@ confirm "\nDo you want to proceed with the installation"
 # Package installation.
 # -----------------------------------------------------------------------------
 
-clear ; msg "ARCH LINUX INSTALLATION: PACKAGE INSTALLATION\n\n"
+clear ; msg "ARCH LINUX INSTALLATION: PACKAGE INSTALLATION"
+# mkinitcpio bug in sbctl hook: https://github.com/Foxboron/sbctl/pull/312
+error "(ignore possible \"sbctl\" errors)\n"
 
 # If the USB installation medium is old, one needs to update pacman keys:
 # (this operation takes a long time and is therefore disabled by default)
@@ -209,7 +211,7 @@ fi
 
 # Install packages to the / (root) partition.
 pacstrap -K /mnt ${PKGS}
-confirm "Do you want to continue the installation"
+confirm "\nDo you want to proceed with the installation"
 
 # Enable daemons.
 systemctl enable bluetooth --root=/mnt &>/dev/null
@@ -232,6 +234,8 @@ systemctl mask org.gnome.SettingsDaemon.Smartcard.service --root=/mnt &>/dev/nul
 # -----------------------------------------------------------------------------
 # User configuration.
 # -----------------------------------------------------------------------------
+
+clear ; msg "ARCH LINUX INSTALLATION: ROOT AND USER CONFIGURATION\n"
 
 # Set hostname.
 clear ; ask "Choose a hostname:" && HOSTNAME="${RESPONSE}"
@@ -271,8 +275,8 @@ EOF
 
 # GitHub repository containing necessary dotfiles.
 RESOURCES="https://raw.githubusercontent.com/mkmaslov/archsetup/main/resources"
-curl "${RESOURCES}/arch/user.zshrc" > "/mnt/home/${USERNAME}/.zshrc"
-curl "${RESOURCES}/arch/root.zshrc" > "/mnt/root/.zshrc"
+curl -s "${RESOURCES}/arch/user.zshrc" > "/mnt/home/${USERNAME}/.zshrc"
+curl -s "${RESOURCES}/arch/root.zshrc" > "/mnt/root/.zshrc"
 arch-chroot /mnt chsh -s /bin/zsh
 
 # Set up environment variables.
@@ -290,9 +294,15 @@ mkdir -p /mnt/etc/pulse/default.pa.d
 # Enable parallel downloads in pacman.
 sed -i 's,#ParallelDownloads = 5,ParallelDownloads = 10,g' /mnt/etc/pacman.conf
 
+confirm "\nDo you want to proceed with the installation"
+
 # -----------------------------------------------------------------------------
 # Unified Kernel Image configuration.
 # -----------------------------------------------------------------------------
+
+clear ; msg "ARCH LINUX INSTALLATION: UNIFIED KERNEL IMAGE CREATION\n"
+# mkinitcpio bug in sbctl hook: https://github.com/Foxboron/sbctl/pull/312
+error "(ignore possible \"sbctl\" errors)\n"
 
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
 echo "lvm UUID=${LVM_UUID} - \
@@ -318,7 +328,6 @@ if [ "$NVIDIA" -eq 0 ]; then
   MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm),g" \
   /mnt/etc/mkinitcpio.conf
 fi
-confirm "\nDo you want to proceed with the installation"
 
 # Create Unified Kernel Image.
 msg "Creating Unified Kernel Image:"
@@ -356,6 +365,8 @@ confirm "\nDo you want to proceed with the installation"
 # Bootloader configuration.
 # -----------------------------------------------------------------------------
 
+clear ; msg "ARCH LINUX INSTALLATION: SECURE BOOT AND UEFI CONFIGURATION\n"
+
 # Configure Secure Boot.
 msg "Configuring Secure Boot:"
 # In some cases, the following command is required before enrolling keys:
@@ -366,10 +377,10 @@ arch-chroot /mnt /bin/bash -e <<EOF
   sbctl sign --save /efi/EFI/Linux/arch-linux.efi
   sbctl sign --save /efi/EFI/Linux/arch-linux-fallback.efi
 EOF
-confirm "Do you want to continue the installation"
+confirm "\nDo you want to proceed with the installation"
 
 # Create UEFI boot entries.
-msg "Creating UEFI boot entries:"
+msg "\nCreating UEFI boot entries:"
 efibootmgr --create --disk ${DISK} --part 1 \
   --label "Arch Linux" --loader "EFI\\Linux\\arch-linux.efi"
 efibootmgr --create --disk ${DISK} --part 1 \
