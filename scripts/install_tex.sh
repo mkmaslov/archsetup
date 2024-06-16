@@ -2,12 +2,15 @@
  
 set -e
 
+# -----------------------------------------------------------------------------
 # This script provides minimal TeX Live installation.
 # It includes packages required for writing physics papers.
+# -----------------------------------------------------------------------------
 
 # Highlight the output.
-YELLOW="\e[1;33m" && COLOR_OFF="\e[0m"
+YELLOW="\e[1;33m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
 cprint() { echo -e "${YELLOW}${1}${COLOR_OFF}"; }
+success() { echo -e "${GREEN}${1}${COLOR_OFF}"; }
 
 cprint "Installing TeX Live ..."
 
@@ -22,8 +25,8 @@ if ! [ -x "$(command -v perl)" ]; then
 else
   
 # Download and install TeX Live.
-TEMPDIR="${HOME}/.tex_install_temp"
-mkdir ${TEMPDIR} && cd ${TEMPDIR}
+TEMP_DIR="${HOME}/.temp_tex_install"
+mkdir ${TEMP_DIR} && cd ${TEMP_DIR}
 curl -LO https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
 tar -xvzf install-tl-unx.tar.gz
 rm install-tl-unx.tar.gz
@@ -40,7 +43,7 @@ cat > texlive.profile <<EOF
   TEXMFSYSVAR ~/.texlive/texmf-var
 EOF
 perl install-tl -profile texlive.profile
-cd .. && rm -rf ${TEMPDIR}
+cd .. && rm -rf ${TEMP_DIR}
 
 # Update tlmgr and install necessary packages.
 tlmgr update --all
@@ -53,4 +56,4 @@ tlmgr install revtex physics graphics tools latex-bin geometry \
 sudo \
   echo "PATH=\"\${PATH}:${HOME}/.texlive/bin/x86_64-linux\"" >> /etc/environment
   
-cprint "Successfully installed TeX Live."
+success "Successfully installed TeX Live!"

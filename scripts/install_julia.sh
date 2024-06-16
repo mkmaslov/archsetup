@@ -2,12 +2,15 @@
 
 set -e
 
+# -----------------------------------------------------------------------------
 # This script provides minimal Julia installation.
 # It includes packages relevant for physics.
+# -----------------------------------------------------------------------------
 
 # Highlight the output.
-YELLOW="\e[1;33m" && COLOR_OFF="\e[0m"
+YELLOW="\e[1;33m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
 cprint() { echo -e "${YELLOW}${1}${COLOR_OFF}"; }
+success() { echo -e "${GREEN}${1}${COLOR_OFF}"; }
 
 cprint "Installing Julia ..."
 
@@ -28,9 +31,9 @@ fi
 yay -S --answerclean All --answerdiff None --removemake --needed julia-bin
 
 # Create Julia script that installs packages and run it. 
-TEMPDIR="${HOME}/.julia_install_temp"
-mkdir ${TEMPDIR}
-cat > ${TEMPDIR}/install.jl <<EOF
+TEMP_DIR="${HOME}/.temp_julia_install"
+mkdir ${TEMP_DIR}
+cat > ${TEMP_DIR}/install.jl <<EOF
   using Pkg
   ENV["PYTHON"]="${PYTHON_VENV}/bin/python"
   ENV["JUPYTER"]="${PYTHON_VENV}/bin/jupyter"
@@ -48,7 +51,7 @@ cat > ${TEMPDIR}/install.jl <<EOF
   Pkg.add("HDF5")
   Pkg.build("PyPlot")
 EOF
-julia ${TEMPDIR}/install.jl
-rm -rf ${TEMPDIR}
+julia ${TEMP_DIR}/install.jl
+rm -rf ${TEMP_DIR}
 
-cprint "Installed Julia."
+success "Successfully installed Julia!"

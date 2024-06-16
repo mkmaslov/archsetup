@@ -1,9 +1,17 @@
 {
     "workbench.startupEditor": "none",
     "editor.rulers": [80],
-    "editor.fontFamily": "'Source Code Pro', 'monospace', monospace",
+    "editor.fontFamily": "'Source Code Pro'",
     "editor.fontSize": 16,
     "security.workspace.trust.banner": "never",
     "security.workspace.trust.enabled": false,
-    "update.showReleaseNotes": false
+    "update.showReleaseNotes": false,
+    "workbench.colorTheme": "Visual Studio Dark",
+    "editor.wordWrap": "on",
+    "window.zoomLevel": 2,
+    "cSpell.language": "en-US,de-AT,ru-RU",
+    "latex-workshop.latex.recipe.default": "lastUsed",
+    "editor.minimap.enabled": false,
+    "files.hotExit": "off",
+    "window.restoreWindows": "none"
 }

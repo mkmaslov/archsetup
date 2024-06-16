@@ -4,18 +4,35 @@ set -e
 
 # -----------------------------------------------------------------------------
 # This script configures GNOME desktop environment.
-# It includes appindicators and dash-to-panel extensions.
+# It includes:
+# - GNOME applications
+# - GNOME Shell configuration
+# - appindicators and dash-to-panel GNOME extensions
 # -----------------------------------------------------------------------------
 
 # Highlight the output.
-YELLOW="\e[1;33m" && COLOR_OFF="\e[0m"
+YELLOW="\e[1;33m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
 cprint() { echo -e "${YELLOW}${1}${COLOR_OFF}"; }
+success() { echo -e "${GREEN}${1}${COLOR_OFF}"; }
 
 # -----------------------------------------------------------------------------
-# Configure GNOME.
+# Install GNOME applications.
 # -----------------------------------------------------------------------------
 
-cprint "Configuring GNOME ..."
+cprint "Installing GNOME applications ..."
+cprint "You may be prompted for a sudo password. (required to use pacman)"
+sudo pacman -Syu
+PKGS=""
+PKGS+="gnome-tweaks gnome-themes-extra gnome-shell-extensions xdg-user-dirs-gtk "
+PKGS+="gnome-calculator eog libheif sushi gnome-disk-utility gvfs-mtp gvfs-gphoto2 "
+sudo pacman -S --needed ${PKGS}
+success "Successfully installed GNOME applications!"
+
+# -----------------------------------------------------------------------------
+# Configure GNOME Shell.
+# -----------------------------------------------------------------------------
+
+cprint "Configuring GNOME Shell ..."
 # User interface.
 gsettings set org.gnome.desktop.calendar show-weekdate true
 gsettings set org.gnome.desktop.interface clock-format '24h'
@@ -112,6 +129,7 @@ gsettings set org.gnome.eog.ui max-accuracy-level 'country'
 # GNOME Terminal.
 gsettings set org.gnome.terminal.legacy theme-variant 'dark'
 gsettings set org.gnome.terminal.legacy confirm-close true
+success "Successfully configured GNOME Shell!"
 
 # -----------------------------------------------------------------------------
 # Install GNOME extensions.
@@ -119,7 +137,7 @@ gsettings set org.gnome.terminal.legacy confirm-close true
 
 # Code taken from: https://unix.stackexchange.com/a/762174
 cprint "Installing GNOME extensions ..."
-TEMPDIR="${HOME}/.gnome_config_temp" ; mkdir ${TEMPDIR}
+TEMP_DIR="${HOME}/.temp_gnome_install" && mkdir ${TEMP_DIR}
 EXTENSION_LIST=(dash-to-panel@jderose9.github.com
   appindicatorsupport@rgcjonas.gmail.com)
 GNOME_SHELL_OUTPUT=$(gnome-shell --version)
@@ -133,11 +151,13 @@ do
       jq '.shell_version_map |."'"${GN_SHELL}"'" | ."pk"')"
     LINK="https://extensions.gnome.org/download-extension/"
     LINK+="${i}.shell-extension.zip?version_tag=$VERSION_TAG"
-    FILE="${TEMPDIR}/${i}.zip"
+    FILE="${TEMP_DIR}/${i}.zip"
     curl -o "${FILE}" "${LINK}"
     gnome-extensions install --force "${FILE}"
 done
-rm -rf "${TEMPDIR}"
 gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com
+success "Successfully installed GNOME extensions!"
 
-cprint "Configured GNOME. (changes may require a reboot)"
+# -----------------------------------------------------------------------------
+rm -rf ${TEMP_DIR}
+success "\nFinished configuring GNOME. (changes may require a reboot)"

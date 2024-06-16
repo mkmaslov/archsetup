@@ -315,9 +315,9 @@ no-read-workqueue,no-write-workqueue,discard" > /mnt/etc/crypttab.initramfs
 
 # Configure disk mapping after decryption.
 cat >> /mnt/etc/fstab <<EOF
-  UUID=${EFI_UUID}    /efi   vfat    defaults     0       0
-  UUID=${ROOT_UUID}   /      ext4    defaults     0       0
-  UUID=${SWAP_UUID}   none   swap    defaults     0       0
+  UUID=${EFI_UUID}    /efi   vfat    defaults,fmask=0077,dmask=0077   0    0
+  UUID=${ROOT_UUID}   /      ext4    defaults                         0    0
+  UUID=${SWAP_UUID}   none   swap    defaults                         0    0
 EOF
 
 # Change mkinitcpio hooks. (do NOT add spaces/tabs)

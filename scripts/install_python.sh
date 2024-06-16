@@ -2,15 +2,18 @@
 
 set -e
 
+# -----------------------------------------------------------------------------
 # This script provides minimal Python installation.
 # It sets up virtual environment at ~/.python_venv.
 # It includes JupyterLab and packages relevant for physics.
+# -----------------------------------------------------------------------------
 
 # Highlight the output.
-YELLOW="\e[1;33m" && COLOR_OFF="\e[0m"
+YELLOW="\e[1;33m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
 cprint() { echo -e "${YELLOW}${1}${COLOR_OFF}"; }
+success() { echo -e "${GREEN}${1}${COLOR_OFF}"; }
 
-cprint "Installing Python and Jupyter Lab ..."
+cprint "Installing Python and JupyterLab ..."
 
 # Setting up virtual environment for Python
 PYDIR="${HOME}/.python_venv"
@@ -23,5 +26,6 @@ cat > ${PYDIR}/pip.conf <<EOF
 EOF
 python -m venv ${PYDIR}
 ${PIP} install --upgrade pip --require-virtualenv
-${PIP} install h5py numpy scipy sympy matplotlib jupyterlab \
-  --require-virtualenv
+${PIP} install h5py numpy scipy sympy matplotlib jupyterlab --require-virtualenv
+
+success "Successfully installed Python and JupyterLab!"

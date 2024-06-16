@@ -2,7 +2,5 @@
 
 set -e
 
-PKGS=""
-PKGS+="git "
-PKGS+="go "
-sudo pacman -S --needed ${PKGS}
+TEMP_ROOT="${HOME}/.post_install"
+./test2.sh ${TEMP_ROOT}
