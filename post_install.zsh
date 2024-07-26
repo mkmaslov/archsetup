@@ -54,7 +54,7 @@ PKGS+="xorg-xeyes qt5-wayland qt6-wayland "
 # Text editing.
 PKGS+="calibre xournalpp pdfarranger gedit "
 PKGS+="libreoffice-fresh libreoffice-extension-texmaths "
-PKGS+="hunspell hunspell-en_US hunspell-de otf-montserrat "
+PKGS+="hunspell hunspell-en_us hunspell-de otf-montserrat "
 PKGS+="adobe-source-code-pro-fonts adobe-source-sans-fonts adobe-source-serif-fonts "
 # Messaging apps.
 PKGS+="signal-desktop telegram-desktop "

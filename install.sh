@@ -203,6 +203,8 @@ PKGS+="terminus-font "
 PKGS+="networkmanager wpa_supplicant network-manager-applet "
 # Audio: pipewire is installed as dependency of gdm -> mutter.
 PKGS+="pipewire-pulse pipewire-alsa pipewire-jack "
+# luks splash screen.
+PKGS+="plymouth "
 # GNOME desktop environment - base packages.
 PKGS+="gdm gnome-control-center gnome-terminal wl-clipboard gnome-keyring "
 PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
@@ -292,6 +294,9 @@ cat >> /mnt/etc/environment <<EOF
 EOF
 [ "$NVIDIA" -eq 0 ] && echo "GBM_BACKEND=nvidia-drm" >> /mnt/etc/environment
 
+# Configure Plymouth theme
+echo "Theme=script" >> /mnt/etc/plymouth/plymouthd.conf
+
 # Create default directory for PulseAudio. (to avoid journalctl warning)
 mkdir -p /mnt/etc/pulse/default.pa.d
 
@@ -323,8 +328,8 @@ EOF
 # Change mkinitcpio hooks. (do NOT add spaces/tabs)
 sed -i "s,HOOKS=(base udev autodetect microcode modconf kms keyboard keymap \
 consolefont block filesystems fsck),HOOKS=(base systemd keyboard autodetect \
-microcode modconf kms sd-vconsole block sd-encrypt lvm2 filesystems fsck),g" \
-/mnt/etc/mkinitcpio.conf
+microcode modconf kms sd-vconsole block plymouth sd-encrypt lvm2 filesystems \
+fsck),g" /mnt/etc/mkinitcpio.conf
 
 # Add mkinitcpio modules for NVIDIA driver.
 if [ "$NVIDIA" -eq 0 ]; then
@@ -342,11 +347,13 @@ CMDLINE+="cryptdevice=UUID=${LVM_UUID}:main rw "
 echo ${CMDLINE} > /mnt/etc/kernel/cmdline_fallback
 # Kernel parameters: NVIDIA drivers
 if [ "$NVIDIA" -eq 0 ]; then
-  CMDLINE+="nvidia_drm.modeset=1 nvidia_drm.fbdev=1"
+  CMDLINE+="nvidia_drm.modeset=1 nvidia_drm.fbdev=1 "
   echo "options nvidia \
   NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp" > \
   /mnt/etc/modprobe.d/nvidia-power-management.conf
 fi
+# Kernel parameters: luks splash screen
+CMDLINE+="quiet splash "
 echo ${CMDLINE} > /mnt/etc/kernel/cmdline
 # Create mkinitcpio preset.
 cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF

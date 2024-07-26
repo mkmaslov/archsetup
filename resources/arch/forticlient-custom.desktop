@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=FortiClient
+GenericName=Security Software
+Comment=Endpoint Protection Suite
+Exec=/opt/forticlient/gui/FortiClient-linux-x64/FortiClient --ozone-platform-hint=x11
+Icon=forticlient
+Type=Application
+Terminal=false
+Categories=Utility;
