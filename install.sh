@@ -9,7 +9,7 @@ set -e
 # - Wayland display server, GNOME desktop environment
 # -----------------------------------------------------------------------------
 
-# Output formatting.
+# Functions for output formatting:
 
 # Highlight the output.
 YELLOW="\e[1;33m" && RED="\e[1;31m" && GREEN="\e[1;32m" && COLOR_OFF="\e[0m"
@@ -50,7 +50,6 @@ cprint "To perform the reset:\n"
 cprint "- Enter BIOS firmware (by pressing F1/F2/Esc/Enter/Del at boot)\n"
 cprint "- Navigate to the \"Security\" settings tab\n"
 cprint "- Delete/clear all Secure Boot keys\n"
-# maybe this is not needed?
 cprint "- Restore factory default Secure Boot keys\n"
 cprint "- Reset Secure Boot to the \"Setup Mode\"\n"
 cprint "- Disable Secure Boot\n"
@@ -117,7 +116,7 @@ ask "Choose a target drive for the installation (with TYPE=disk):" \
 # Partition the target drive.
 ask "Are you installing Arch Linux alongside Windows (dual boot) [y/N]?"
 if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
-  # Windows creates 4 partitions, including EFI boot partition.
+  # Windows creates 4 partitions, including a EFI boot partition.
   # Hence, Arch Linux only needs one partition that takes all free disk space.
   WINDOWS=0 ; sgdisk ${DISK} -n 5:0:0 -t 5:8e00 -c 5:LVM &>/dev/null
 else
@@ -161,7 +160,7 @@ mkdir /mnt/efi
 mount ${EFI} /mnt/efi
 MOUNTED=0
 
-# Read out UUID's, after creating partitions (mkfs resets UUID).
+# Get partition UUID's. Note that "mkfs" resets UUID.
 EFI_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep EFI | cut -d " " -f1)"
 LVM_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep LVM | cut -d " " -f1)"
 SWAP_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-swap | cut -d " " -f1)"
@@ -173,16 +172,14 @@ confirm "\nDo you want to proceed with the installation"
 # Package installation.
 # -----------------------------------------------------------------------------
 
-clear ; msg "ARCH LINUX INSTALLATION: PACKAGE INSTALLATION"
-# mkinitcpio bug in sbctl hook: https://github.com/Foxboron/sbctl/pull/312
-error "(ignore possible \"sbctl\" errors)\n"
+clear ; msg "ARCH LINUX INSTALLATION: PACKAGE INSTALLATION\n"
 
 # If the USB installation medium is old, one needs to update pacman keys:
 # (this operation takes a long time and is therefore disabled by default)
 # pacman-key --refresh-keys &>/dev/null
 
 # Enable parallel downloads for pacstrap.
-sed -i 's,#ParallelDownloads = 5,ParallelDownloads = 10,g' /etc/pacman.conf
+sed -i 's,#ParallelDownloads = 5,ParallelDownloads = 20,g' /etc/pacman.conf
 # Update pacman cache.
 pacman -Sy
 # Create a list of packages.
@@ -203,7 +200,7 @@ PKGS+="terminus-font "
 PKGS+="networkmanager wpa_supplicant network-manager-applet "
 # Audio: pipewire is installed as dependency of gdm -> mutter.
 PKGS+="pipewire-pulse pipewire-alsa pipewire-jack "
-# luks splash screen.
+# Graphic splash screen for luks decryption.
 PKGS+="plymouth "
 # GNOME desktop environment - base packages.
 PKGS+="gdm gnome-control-center gnome-terminal wl-clipboard gnome-keyring "
@@ -301,7 +298,7 @@ echo "Theme=script" >> /mnt/etc/plymouth/plymouthd.conf
 mkdir -p /mnt/etc/pulse/default.pa.d
 
 # Enable parallel downloads in pacman.
-sed -i 's,#ParallelDownloads = 5,ParallelDownloads = 10,g' /mnt/etc/pacman.conf
+sed -i 's,#ParallelDownloads = 5,ParallelDownloads = 20,g' /mnt/etc/pacman.conf
 
 confirm "\nDo you want to proceed with the installation"
 
@@ -309,9 +306,7 @@ confirm "\nDo you want to proceed with the installation"
 # Unified Kernel Image configuration.
 # -----------------------------------------------------------------------------
 
-clear ; msg "ARCH LINUX INSTALLATION: UNIFIED KERNEL IMAGE CREATION"
-# mkinitcpio bug in sbctl hook: https://github.com/Foxboron/sbctl/pull/312
-error "(ignore possible \"sbctl\" errors)\n"
+clear ; msg "ARCH LINUX INSTALLATION: UNIFIED KERNEL IMAGE CREATION\n"
 
 # Configure disk mapping during decryption. (do NOT add spaces/tabs)
 echo "lvm UUID=${LVM_UUID} - \
@@ -364,9 +359,8 @@ cat > /mnt/etc/mkinitcpio.d/linux.preset <<EOF
   fallback_options="-S autodetect --cmdline /etc/kernel/cmdline_fallback"
   fallback_uki="/efi/EFI/Linux/arch-linux-fallback.efi"
 EOF
-# Generate UKI: "|| true" is due to a bug in sbctl signing inside mkinitcpio
-# See more: https://github.com/Foxboron/sbctl/pull/312
-mkdir -p /mnt/efi/EFI/Linux && arch-chroot /mnt mkinitcpio -P || true
+# Generate UKI
+mkdir -p /mnt/efi/EFI/Linux && arch-chroot /mnt mkinitcpio -P
 # Remove exposed initramfs files.
 rm /mnt/efi/initramfs-*.img &>/dev/null || true
 rm /mnt/boot/initramfs-*.img &>/dev/null || true

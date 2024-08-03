@@ -5,7 +5,7 @@ set -e
 # -----------------------------------------------------------------------------
 # This script provides minimal Python installation.
 # It sets up virtual environment at ~/.python_venv.
-# It includes JupyterLab and packages relevant for physics.
+# It includes JupyterLab and some packages.
 # -----------------------------------------------------------------------------
 
 # Highlight the output.
@@ -26,6 +26,7 @@ cat > ${PYDIR}/pip.conf <<EOF
 EOF
 python -m venv ${PYDIR}
 ${PIP} install --upgrade pip --require-virtualenv
-${PIP} install h5py numpy scipy sympy matplotlib jupyterlab --require-virtualenv
+${PIP} install jupyterlab numpy scipy matplotlib sympy h5py \
+    pandas tabulate pypdf yt-dlp --require-virtualenv
 
 success "Successfully installed Python and JupyterLab!"
