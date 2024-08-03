@@ -44,19 +44,6 @@ confirm() {
 loadkeys us ; setfont ter-132b ; clear ; WINDOWS=1 ; NVIDIA=1
 msg "ARCH LINUX INSTALLATION: PRE-CHECK\n"
 
-# Check whether Secure Boot is disabled.
-msg "Full Secure Boot reset is recommended before using this script."
-cprint "To perform the reset:\n"
-cprint "- Enter BIOS firmware (by pressing F1/F2/Esc/Enter/Del at boot)\n"
-cprint "- Navigate to the \"Security\" settings tab\n"
-cprint "- Delete/clear all Secure Boot keys\n"
-cprint "- Restore factory default Secure Boot keys\n"
-cprint "- Reset Secure Boot to the \"Setup Mode\"\n"
-cprint "- Disable Secure Boot\n"
-msg "Verifying Secure Boot status. The output should contain: disabled (setup)."
-bootctl status | grep --color "Secure Boot"
-confirm "Did you reset and disable Secure Boot"
-
 # Check that system is booted in UEFI mode.
 status "\nChecking UEFI boot mode: "
 COUNT=$(ls /sys/firmware/efi/efivars | grep -c '.')
@@ -69,6 +56,19 @@ if [ ${COUNT} -eq 0 ]; then
 else
   success "success."
 fi
+
+# Check whether Secure Boot is disabled.
+msg "Full Secure Boot reset is recommended before using this script."
+cprint "To perform the reset:\n"
+cprint "- Enter BIOS firmware (by pressing F1/F2/Esc/Enter/Del at boot)\n"
+cprint "- Navigate to the \"Security\" settings tab\n"
+cprint "- Delete/clear all Secure Boot keys\n"
+cprint "- Restore factory default Secure Boot keys\n"
+cprint "- Reset Secure Boot to the \"Setup Mode\"\n"
+cprint "- Disable Secure Boot\n"
+msg "Verifying Secure Boot status. The output should contain: disabled (setup)."
+bootctl status | grep --color "Secure Boot"
+confirm "Did you reset and disable Secure Boot"
 
 # Test Internet connection.
 status "Testing Internet connection (takes few seconds): "
@@ -391,6 +391,7 @@ efibootmgr --create --disk ${DISK} --part 1 \
 efibootmgr --create --disk ${DISK} --part 1 \
   --label "Arch Linux (fallback)" --loader "EFI\\Linux\\arch-linux-fallback.efi"
 success "UEFI boot entries successfully created!"
+confirm "\nFinish the installation"
 
 # Finish installation.
 clear ; success "ARCH LINUX INSTALLATION: INSTALLATION COMPLETED\n\n"
