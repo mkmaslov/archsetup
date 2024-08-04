@@ -147,14 +147,16 @@ curl "${RES}/vscodium/settings.json" > "${HOME}/.config/VSCodium/User/settings.j
 curl "${RES}/vscodium/keybindings.json" > "${HOME}/.config/VSCodium/User/keybindings.json"
 codium --install-extension james-yu.latex-workshop
 codium --install-extension streetsidesoftware.code-spell-checker
+codium --install-extension streetsidesoftware.code-spell-checker-german
 success "Successfully configured VS Codium!"
+
+# Add to settings.json: "cSpell.language": "en,de-de",
 
 
 
 
 # -----------------------------------------------------------------------------
 # To-do's:
-# - vscodium configuration (extensions?)
 # - USBGuard setup
 # - apparmor + audit setup
 # - firejail + firetools setup
@@ -207,3 +209,5 @@ git config --global credential.helper libsecret
 rm -rf ${TEMP_ROOT}
 
 success "Post-installation finished!"
+
+# -----------------------------------------------------------------------------
