@@ -36,12 +36,76 @@ confirm() {
   fi
 }
 
+# Print out the instructions:
+
+# ... for using this script.
+ARG_HELP () {
+  msg    "Run this script with one of the following arguments:"
+  cprint " --arch            install Arch Linux as the only OS on this PC\n"
+  cprint "                   (add --nvidia or --amd argument to install dGPU drivers)\n"
+  cprint " --windows         install Arch Linux beside the existing Windows installation\n"
+  cprint "                   (add --nvidia or --amd argument to install dGPU drivers)\n"
+  cprint " --help-sb         instructions on resetting the Secure Boot\n"
+  cprint " --help-internet   instructions on setting up Internet connection\n"
+  cprint " --help-uefi       instructions on setting up the UEFI bootloader\n"
+}
+
+# ... for resetting the Secure Boot.
+SECURE_BOOT_HELP () {
+  msg "Full Secure Boot reset is recommended before using this script."
+  cprint "To perform the reset:\n"
+  cprint "- Enter BIOS firmware (by pressing F1/F2/Esc/Enter/Del at boot)\n"
+  cprint "- Navigate to the \"Security\" settings tab\n"
+  cprint "- Delete/clear all Secure Boot keys\n"
+  #cprint "- Restore factory default Secure Boot keys\n"
+  cprint "- Reset Secure Boot to the \"Setup Mode\"\n"
+  cprint "- Disable Secure Boot\n"
+}
+
+# ... for setting up Internet connection.
+INTERNET_HELP () {
+  cprint "Before proceeding with the installation, "
+  cprint "please make sure you have a functional Internet connection.\n"
+  cprint "To connect to a WiFi network, use:\n"
+  cprint " >> iwctl station wlan0 connect <ESSID>.\n"
+  cprint "To manually test the Internet connection, use:\n"
+  cprint " >> ping archlinux.org.\n"
+}
+
+# ... for setting up the UEFI bootloader.
+UEFI_HELP () {
+  cprint "Please configure the desired boot order using:\n"
+  cprint " >> efibootmgr --bootorder XXXX,YYYY,...\n"
+  cprint "To remove unused boot entries, use:\n"
+  cprint " >> efibootmgr -b XXXX --delete-bootnum\n"
+  cprint "After finishing UEFI bootloader configuration, reboot into BIOS using:\n"
+  cprint " >> systemctl reboot --firmware-setup\n"
+  cprint "In BIOS, enable Secure Boot and Boot Order Lock (if available)."
+}
+
 # -----------------------------------------------------------------------------
 # Initial checks.
 # -----------------------------------------------------------------------------
 
+WINDOWS=1 ; NVIDIA=1 ; AMD=1
+case "${1}" in
+  "--arch") if [ "$2" = "--nvidia" ]; then NVIDIA=0; 
+            elif [ "$2" = "--amd" ]; then AMD=0;  fi;;
+  "--windows") WINDOWS=0 ; if [ "$2" = "--nvidia" ]; then NVIDIA=0; 
+                           elif [ "$2" = "--amd" ]; then AMD=0;  fi;;
+  "--help") ARG_HELP && exit ;;
+  "--help-sb") SECURE_BOOT_HELP && exit ;;
+  "--help-internet") INTERNET_HELP && exit ;;
+  "--help-uefi") UEFI_HELP && exit ;;
+  *) error "Argument \"${1}\" is not recognized!" && ARG_HELP && exit ;;
+esac
+
+echo "WINDOWS:${WINDOWS} NVIDIA:${NVIDIA} AMD:${AMD}"
+
+exit
+
 # Reset terminal window.
-loadkeys us ; setfont ter-132b ; clear ; WINDOWS=1 ; NVIDIA=1
+loadkeys us ; setfont ter-132b ; clear
 msg "ARCH LINUX INSTALLATION: PRE-CHECK\n"
 
 # Check that system is booted in UEFI mode.
@@ -54,18 +118,11 @@ if [ ${COUNT} -eq 0 ]; then
   msg    "This setting can be configured in BIOS."
   exit
 else
-  success "success."
+  success "success.\n"
 fi
 
 # Check whether Secure Boot is disabled.
-msg "\nFull Secure Boot reset is recommended before using this script."
-cprint "To perform the reset:\n"
-cprint "- Enter BIOS firmware (by pressing F1/F2/Esc/Enter/Del at boot)\n"
-cprint "- Navigate to the \"Security\" settings tab\n"
-cprint "- Delete/clear all Secure Boot keys\n"
-#cprint "- Restore factory default Secure Boot keys\n"
-cprint "- Reset Secure Boot to the \"Setup Mode\"\n"
-cprint "- Disable Secure Boot\n"
+SECURE_BOOT_HELP
 msg "Verifying Secure Boot status. The output should contain: disabled (setup)."
 bootctl status | grep --color "Secure Boot"
 confirm "Did you reset and disable Secure Boot"
@@ -76,12 +133,7 @@ ping -w 5 archlinux.org &>/dev/null
 NREACHED=${?}
 if [ ${NREACHED} -ne 0 ]; then
   error  "failed."
-  cprint "Before proceeding with the installation, "
-  cprint "please make sure you have a functional Internet connection.\n"
-  cprint "To connect to a WiFi network, use:\n"
-  cprint ">>  iwctl station wlan0 connect <ESSID>.\n"
-  cprint "To manually test the Internet connection, use: "
-  cprint ">>  ping archlinux.org.\n"
+  INTERNET_HELP
   exit
 else
   success "success."
@@ -114,11 +166,10 @@ ask "Choose a target drive for the installation (with TYPE=disk):" \
   "/dev/" && DISK="/dev/${RESPONSE}"
 
 # Partition the target drive.
-ask "Are you installing Arch Linux alongside Windows (dual boot) [y/N]?"
-if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
+if [ "$WINDOWS" -eq 0 ]; then
   # Windows creates 4 partitions, including a EFI boot partition.
   # Hence, Arch Linux only needs one partition that takes all free disk space.
-  WINDOWS=0 ; sgdisk ${DISK} -n 5:0:0 -t 5:8e00 -c 5:LVM &>/dev/null
+  sgdisk ${DISK} -n 5:0:0 -t 5:8e00 -c 5:LVM &>/dev/null
 else
   confirm "Deleting all data on ${DISK}. Do you agree"
   wipefs -af ${DISK} &>/dev/null
@@ -126,7 +177,7 @@ else
     -n 2:0:0 -t 2:8e00 -c 2:LVM &>/dev/null
 fi
 msg "\nCurrent partition table:" && sgdisk -p ${DISK}
-confirm "\nDo you want to proceed with the installation"
+confirm "Do you want to proceed with the installation"
 
 clear ; msg "ARCH LINUX INSTALLATION: FULL-DISK ENCRYPTION\n"
 
@@ -166,7 +217,7 @@ LVM_UUID="$(lsblk ${DISK} -o UUID,PARTLABEL | grep LVM | cut -d " " -f1)"
 SWAP_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-swap | cut -d " " -f1)"
 ROOT_UUID="$(lsblk ${DISK} -o UUID,NAME | grep main-root | cut -d " " -f1)"
 
-confirm "\nDo you want to proceed with the installation"
+confirm "Do you want to proceed with the installation"
 
 # -----------------------------------------------------------------------------
 # Package installation.
@@ -207,14 +258,18 @@ PKGS+="gdm gnome-control-center gnome-terminal wl-clipboard gnome-keyring "
 PKGS+="xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk "
 # File(system) management tools.
 PKGS+="lvm2 nautilus "
-ask "Do you want to install the proprietary NVIDIA driver [y/N]?"
-if [[ $RESPONSE =~ ^(yes|y|Y|YES|Yes)$ ]]; then
-  NVIDIA=0 ; PKGS+="nvidia "
+# NVIDIA drivers
+if [ "$NVIDIA" -eq 0 ]; then
+  PKGS+="nvidia "
+fi
+# AMD drivers, if requested
+if [ "$AMD" -eq 0 ]; then
+  PKGS+="mesa vulkan-radeon libva-mesa-driver mesa-vdpau "
 fi
 
 # Install packages to the / (root) partition.
 pacstrap -K /mnt ${PKGS}
-confirm "\nDo you want to proceed with the installation"
+confirm "Do you want to proceed with the installation"
 
 # Enable daemons.
 systemctl enable bluetooth --root=/mnt &>/dev/null
@@ -300,7 +355,7 @@ mkdir -p /mnt/etc/pulse/default.pa.d
 # Enable parallel downloads in pacman.
 sed -i 's,#ParallelDownloads = 5,ParallelDownloads = 20,g' /mnt/etc/pacman.conf
 
-confirm "\nDo you want to proceed with the installation"
+confirm "Do you want to proceed with the installation"
 
 # -----------------------------------------------------------------------------
 # Unified Kernel Image configuration.
@@ -364,7 +419,7 @@ mkdir -p /mnt/efi/EFI/Linux && arch-chroot /mnt mkinitcpio -P
 # Remove exposed initramfs files.
 rm /mnt/efi/initramfs-*.img &>/dev/null || true
 rm /mnt/boot/initramfs-*.img &>/dev/null || true
-confirm "\nDo you want to proceed with the installation"
+confirm "Do you want to proceed with the installation"
 
 # -----------------------------------------------------------------------------
 # Bootloader configuration.
@@ -382,7 +437,7 @@ arch-chroot /mnt /bin/bash -e <<EOF
   sbctl sign --save /efi/EFI/Linux/arch-linux.efi
   sbctl sign --save /efi/EFI/Linux/arch-linux-fallback.efi
 EOF
-confirm "\nDo you want to proceed with the installation"
+confirm "Do you want to proceed with the installation"
 
 # Create UEFI boot entries.
 msg "\nCreating UEFI boot entries:"
@@ -391,16 +446,10 @@ efibootmgr --create --disk ${DISK} --part 1 \
 efibootmgr --create --disk ${DISK} --part 1 \
   --label "Arch Linux (fallback)" --loader "EFI\\Linux\\arch-linux-fallback.efi"
 success "UEFI boot entries successfully created!"
-confirm "\nFinish the installation"
+confirm "Finish the installation"
 
-# Finish installation.
-clear ; success "ARCH LINUX INSTALLATION: INSTALLATION COMPLETED\n\n"
-cprint  "Please configure the desired boot order using:\n"
-cprint  ">>  efibootmgr --bootorder XXXX,YYYY,...\n"
-cprint  "To remove unused boot entries, use:\n"
-cprint  ">>  efibootmgr -b XXXX --delete-bootnum\n"
-cprint  "After finishing UEFI bootloader configuration, reboot into BIOS using:\n"
-cprint  ">>  systemctl reboot --firmware-setup\n"
-cprint  "In BIOS, enable Secure Boot and Boot Order Lock (if available)."
+# Finish the installation.
+clear ; success "ARCH LINUX INSTALLATION: INSTALLATION COMPLETED\n"
+UEFI_HELP
 
 # -----------------------------------------------------------------------------
