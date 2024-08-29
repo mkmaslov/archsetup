@@ -123,6 +123,9 @@ iwctl device list                   # list all Wi-Fi devices
 rfkill list                         # list kill switch settings
 rfkill unblock <DEVICE-NUM>         # unblock soft-blocked device
 
+rmmod iwlwifi                       # stop the Wi-Fi card driver
+modprobe iwlwifi                    # start the Wi-Fi card driver
+
 iwctl station <DEVICE-NAME> scan    # scan for Wi-Fi networks
 ping archlinux.org                  # test Internet connection
 ```

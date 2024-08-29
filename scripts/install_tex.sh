@@ -22,7 +22,7 @@ fi
 if ! [ -x "$(command -v perl)" ]; then
   cprint "Please install \"perl\" before proceeding."
   exit
-else
+fi
   
 # Download and install TeX Live.
 TEMP_DIR="${HOME}/.temp_tex_install"
@@ -43,7 +43,7 @@ cat > texlive.profile <<EOF
   TEXMFSYSVAR ~/.texlive/texmf-var
 EOF
 perl install-tl -profile texlive.profile
-cd .. && rm -rf ${TEMP_DIR}
+cd ${HOME} && rm -rf ${TEMP_DIR}
 
 # Update tlmgr and install necessary packages.
 tlmgr update --all
