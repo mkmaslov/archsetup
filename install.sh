@@ -100,9 +100,8 @@ case "${1}" in
   *) error "Argument \"${1}\" is not recognized!" && ARG_HELP && exit ;;
 esac
 
-echo "WINDOWS:${WINDOWS} NVIDIA:${NVIDIA} AMD:${AMD}"
-
-exit
+#echo "WINDOWS:${WINDOWS} NVIDIA:${NVIDIA} AMD:${AMD}"
+#exit
 
 # Reset terminal window.
 loadkeys us ; setfont ter-132b ; clear
